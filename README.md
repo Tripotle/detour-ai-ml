@@ -1,5 +1,10 @@
 ML backend for Scenic Route Recommender AIM Labs Spring 2023
 
 Resources:
-https://github.com/googlemaps/google-maps-services-python
-https://dev.to/jakewitcher/using-env-files-for-environment-variables-in-python-applications-55a1
+* [Google Maps Python API](https://github.com/googlemaps/google-maps-services-python)
+* [Env Variables](https://dev.to/jakewitcher/using-env-files-for-environment-variables-in-python-applications-55a1)
+* Doc2Vec
+* TripAdvisor API
+* Instagram API
+* Video to trip? 
+* Concatenate all adjectives (part of speech labeling)
