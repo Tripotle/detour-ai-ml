@@ -1,4 +1,11 @@
+# Stores private info
 .env
 
 # Alex's IDE files
 .idea/
+
+# This file is created automatically by Mac
+.DS_Store
+
+# This file created by python when it runs, should not be committed
+__pycache__
