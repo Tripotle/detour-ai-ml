@@ -1,2 +1,4 @@
 .env
 
+# Alex's IDE files
+.idea/
