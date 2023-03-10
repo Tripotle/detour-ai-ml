@@ -16,6 +16,7 @@ def test_api(address=TEST_ADDRESS):
             fields=["geometry/location", "place_id"],
             location_bias="point:90,90",
         )
+        print("place")
         pprint(place)
     except googlemaps.exceptions.ApiError as e:
         pprint(e)
@@ -23,6 +24,7 @@ def test_api(address=TEST_ADDRESS):
     # https://developers.google.com/maps/documentation/javascript/geocoding#GeocodingRequests
     try:
         result = gmaps.geocode(address)
+        print("result")
         pprint(result)
     except googlemaps.exceptions.ApiError as e:
         pprint(e)
