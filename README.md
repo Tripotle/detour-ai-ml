@@ -16,3 +16,14 @@ Resources:
 Pip packages:
 * `python-dotenv`
 * `googlemaps`
+
+Meeting with Zack:
+* Use Doc2Vec as a first pass preprocessing to filter thousands of locations -> few dozen
+  * cosine similarity
+* Use ChatGPT to then compare the keywords to the reviews/ information about the few dozen locations to pick the best one. 
+* ChatGPT API
+  * For every prompt, to get ChatGPT to respond in a format that you want, use prompt engineering.
+  * Be very specific with the prompt ("treat ChatGPT like a 5 year old"). 
+  * Describe the general framework/ give instructions.
+  * Ex: 
+* Models on HuggingFace
