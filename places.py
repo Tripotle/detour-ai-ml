@@ -14,9 +14,9 @@ def test_places_api(location=LOCATION, radius=500):
         results = gmaps.places_nearby(
             location,
             radius,
-            type="tourist_attraction"
+            type=["aquarium", "point_of_interest", "tourist_attraction",]
         )
-        pprint(results)
+        pprint(len(results))
     except googlemaps.exceptions.ApiError as e:
         pprint(e)
 
