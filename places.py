@@ -20,7 +20,6 @@ PLACE_TYPES: list[str] = [
     "courthouse",
     "embassy",
     "library",
-    "lodging",
     "museum",
     "park",
     "shopping_mall",
@@ -72,6 +71,7 @@ EXCLUDE_PLACE_TYPES: list[str] = [
     "liquor_store",
     "local_government_office",
     "locksmith",
+    "lodging",
     "meal_delivery",
     "meal_takeaway",
     "movie_rental",
@@ -145,12 +145,14 @@ def from_query_result(query_result: any) -> Location:
                     place_id=query_result['place_id'], types=query_result['types'])
 
 
-def get_location_by_name(name: str) -> Location:
+def get_location_by_name(name: str) -> Location | None:
     gmaps = googlemaps.Client(key=api.get_api_key())
     query_result = gmaps.places(
         query=name
     )
     # pprint(query_result['results'][0])
+    if len(query_result['results']) < 1:
+        return None
     return from_query_result(query_result['results'][0])
 
 
@@ -168,7 +170,10 @@ def get_nearby_places(page_token: str = None, location=LOCATION, radius=200, typ
             radius=radius,
             type=", ".join(types),
         )
-        pprint(query_result['next_page_token'])
+        try:
+            pprint(query_result['next_page_token'])
+        except KeyError:
+            pass
 
         result: list[Location] = []
         for place in query_result['results']:
@@ -197,10 +202,10 @@ def get_nearby_places(page_token: str = None, location=LOCATION, radius=200, typ
 
 
 if __name__ == '__main__':
-    # print(str(get_location_by_name("Great Dome")))
+    print(str(get_location_by_name("Carson Beach")))
     # print(f'api key is {api.get_api_key()}')
-    token = 'AfLeUgPTvH9rLlEmJMIhy6lYO_8i-A7ldunk7F8LlBc6kUGYy6XjuRTpA7PqT7qqCU4zxq_5Y_Zoo-iRUD-sRC3F4G385THtojTZxlqHslUPG3RSijo6JQ270qtUA1htxlR4YdtLSjFmWOOMLjMUb0RjSuxZQOEFFczjEhaMp3Z7GMF_aW6rA0-4_iP_mKXjHoyM5wXgiO3Q5g_NmLL9M_H0sbiOk5IfO9gjfWyXHveJUZdjVB4UR_2B7L60zFeE-sp2aUW8appJaueHrYS-A1vb_dzH-03o8HJJaNc_B6Hq3Blt_QKmV0I2rJwPvdud9-JVb4haiV4atomak7sqclRDRmedcNPrnfBPhIZ5uiyu7cPp6Wt0R_GYfJhYYkU7h_iZTuhIUl3i5W5qUy_evNo5OOVxdwtMWFe6AIIPhWnba7PEHq-7vNW7dq8c-dPAG9SmiJjUn0E09k3qtoynpzibaTYIyfUwQDG7faWGQMTEMivx0-yTBt7x0m6xgz1ThDKi1Ycz9mghSZqvc0iQAVCVKOW9KwnP7qP4aokPRLJMlGOfX1Dqw35iKRznMEavsZLNX6gt_IeRN-ZAdm_EnciPEqVm92LkrmUzQn82w05We3hR9CfEeUD0_HNK5hV5Ftd1-hZ10EgZqH8dxBRzkBzpgK3TQdqwvn8kVqToZkbZ7UZ9BaAgqw_DVZJUdGUGADI0IheKKZ5JganLt0keySzmACMCwVvNtd4pYCHivrMxbV0WtVwoepkOpbnRKzGuMwt74E1B8oc9wxX2Xg1P3aW4zTGh9UmRqZ_hIns12v38PoOejoqa-XPYFln0CAF3gcZWWmdd4VpmNv7RVGfFzeoLJGdpeXSY716Z04svXXC26HkX8R9IdausrYkXoVa1f8DGQBalTLCGKDpWYm8xVu1fHl6jL11NmZOYisevx4azJQH1_R_f_ChN_YXXo2MUC6g'
+    token = 'AfLeUgOeQfHjlodGXK9MM4kmrAMPZMWZ2ENrhyikFUPmNB4OaBlo9uYFyuA2JycLL0raNhAnX2iaDXdHgWs9Zucgd2-btor1mTzx5Rf1VN_7zNU-h01A8f7FKHXKGzv9HJZSjVm9kmGn_YWTHGsZY87lq4-lYid4_CFYtwlLupkW2-yE3FtS3StnlG45fyFa4SA4_iIMDmmlvHJTSFbZqN_Hf1paRyFPuxjA8dKpAHpe3CD6pLdmlID-MqBATLKF0IGAzWQ-bR61zafukXOShne-0Asd-K7Fs250iSpPoF5oMTBeKGwdjy83Hi1x0k45R4g5q_fFq6oNjO3XFVDSc6m1AtnSqs3vm4aaZYz5zoW0zACgmf8RtSmwqEmlbk-BCTICRd6GwaV_kjve16iBf4jlVC8HnmzhC7Im6N-hmB0W1eX940dxvdh77iAE2sXqzgo65xEaG1uAmLo2hs75io9euWkjsXBfmN9lDbZ8FqOYblSJRpltfNn7yfpWuk1F1-L_78TVMK7eJVr2bzkzKy-ZKEitBePo8DdaBG9FhDenzjFVXVHK5JpM_LjqGOmFF2nUOTzdvS2g3JWV3_gJggn8jfvIUyd3Yg4Xc9mPV0qbXYAhCNR5fdgbO9rsqrxof8m9HpwpnVqUZebUdUPPS_kqA6ftA1p_VLtI3myR7V5tI10Ckt4OboNGJaM4n0PmFZO4r1XJ4m3_SWjk0Hg8lkJ6wGenZMnWqn-XsiB3VE6lqbnpA8Zi-hl_rhWkNbpc5BFhTaDxiFza0qpNx_kdSVFvBE2PR8JVSwu88c2vvXC1Pmr7YQwPui2D_vKDd1BMxl5oixRa6JmCVTNVbgOGP4pDfHUAvwQWnC7MHcqNgdcoILbUB-ByPehtRdtCSh9nO8LbwWC0s1W5Jp1J_9HZewZvu-FjklGbnVoGtXuQm21WOBEhU5HWIaE'
 
-    for place in get_nearby_places(page_token=token,radius=1000):
-        pprint(str(place), width=1000)
-        pprint(place.get_gmaps_link())
+    # for place in get_nearby_places(page_token=token,types=["tourist_attraction"],radius=1000):
+    #     pprint(str(place), width=1000)
+    #     pprint(place.get_gmaps_link())
