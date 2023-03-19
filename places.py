@@ -2,6 +2,7 @@ import api
 import googlemaps
 from pprint import pprint
 import urllib.parse
+import time
 
 # Kresge
 TEST_ADDRESS = '48 Massachusetts Ave w16, Cambridge, MA 02139'
@@ -165,47 +166,59 @@ def get_nearby_places(page_token: str = None, location=LOCATION, radius=200, typ
 
     try:
         query_result: dict = gmaps.places_nearby(
-            page_token=page_token,
             location=location,
             radius=radius,
             type=", ".join(types),
+            page_token=page_token,
         )
-        try:
-            pprint(query_result['next_page_token'])
-        except KeyError:
-            pass
+        
+        # try:
+        #     print("next page token!")
+        #     pprint(query_result['next_page_token'])
+        # except KeyError:
+        #     print("no next page token!")
+        #     pprint(query_result)
+        #     pass
 
         result: list[Location] = []
         for place in query_result['results']:
-            location = from_query_result(place)
+            parsed_place = from_query_result(place)
             should_append = True
-            for type_name in location.types:
+            for type_name in parsed_place.types:
                 if type_name in exclude_types:
                     should_append = False
                     break
             if should_append:
-                result.append(location)
+                result.append(parsed_place)
 
-        # if 'next_page_token' in query_result.keys():
-        #     result.extend(get_nearby_places(
-        #         page_token=query_result['next_page_token'],
-        #         location=location,
-        #         radius=radius,
-        #         types=types,
-        #         exclude_types=exclude_types
-        #     ))
+        if 'next_page_token' in query_result.keys():
+            time.sleep(2)
+            result.extend(get_nearby_places(
+                page_token=query_result['next_page_token'],
+                location=location,
+                radius=radius,
+                types=types,
+                exclude_types=exclude_types
+            ))
 
+        else: print("no more next page")
+        
         return result
     except googlemaps.exceptions.ApiError as e:
+        print(page_token, location, radius, types)
+        # try the same query in case page_token is just bad?
         print("API Error!")
         raise e
 
 
 if __name__ == '__main__':
-    print(str(get_location_by_name("Carson Beach")))
+    # print(str(get_location_by_name("Carson Beach")))
     # print(f'api key is {api.get_api_key()}')
-    token = 'AfLeUgOeQfHjlodGXK9MM4kmrAMPZMWZ2ENrhyikFUPmNB4OaBlo9uYFyuA2JycLL0raNhAnX2iaDXdHgWs9Zucgd2-btor1mTzx5Rf1VN_7zNU-h01A8f7FKHXKGzv9HJZSjVm9kmGn_YWTHGsZY87lq4-lYid4_CFYtwlLupkW2-yE3FtS3StnlG45fyFa4SA4_iIMDmmlvHJTSFbZqN_Hf1paRyFPuxjA8dKpAHpe3CD6pLdmlID-MqBATLKF0IGAzWQ-bR61zafukXOShne-0Asd-K7Fs250iSpPoF5oMTBeKGwdjy83Hi1x0k45R4g5q_fFq6oNjO3XFVDSc6m1AtnSqs3vm4aaZYz5zoW0zACgmf8RtSmwqEmlbk-BCTICRd6GwaV_kjve16iBf4jlVC8HnmzhC7Im6N-hmB0W1eX940dxvdh77iAE2sXqzgo65xEaG1uAmLo2hs75io9euWkjsXBfmN9lDbZ8FqOYblSJRpltfNn7yfpWuk1F1-L_78TVMK7eJVr2bzkzKy-ZKEitBePo8DdaBG9FhDenzjFVXVHK5JpM_LjqGOmFF2nUOTzdvS2g3JWV3_gJggn8jfvIUyd3Yg4Xc9mPV0qbXYAhCNR5fdgbO9rsqrxof8m9HpwpnVqUZebUdUPPS_kqA6ftA1p_VLtI3myR7V5tI10Ckt4OboNGJaM4n0PmFZO4r1XJ4m3_SWjk0Hg8lkJ6wGenZMnWqn-XsiB3VE6lqbnpA8Zi-hl_rhWkNbpc5BFhTaDxiFza0qpNx_kdSVFvBE2PR8JVSwu88c2vvXC1Pmr7YQwPui2D_vKDd1BMxl5oixRa6JmCVTNVbgOGP4pDfHUAvwQWnC7MHcqNgdcoILbUB-ByPehtRdtCSh9nO8LbwWC0s1W5Jp1J_9HZewZvu-FjklGbnVoGtXuQm21WOBEhU5HWIaE'
-
-    # for place in get_nearby_places(page_token=token,types=["tourist_attraction"],radius=1000):
+    # token = 'AfLeUgMwiC8X7JO0-thBk8ro369wy9duoKJ5oD-m3ScepBXURtg0npW5QRbYi45fqXvLnORQSbwiz1W1ghkRhy89ibrSS17akDzlrsPDq3L9kXgw62PhJ2UFDy8rSwNQ_YT6xQFMcgt03ujcm-hEGlh3lcuFL_KZ2gdmZ0RAYeHs9SUST40PQoP6ide7cAvtqT1AwwyX_jb0nAOrYyDNOk1gP2JW1qQ8GjuDT0CRDbGTUf6I99B41utdfmLVNjeUmUHf_uAlj4s7NhRDLycReE-pwOywsp4M0zlHNbtkqKAlFFRavGdxBkESHRS1EABdQpXRMVW99r0U3TL_uBJ8IkEHTYm8idk0T4rOec24BcAuJBpgIkWeTvU-UCEXCz1ItQ-mWZ_e7ORiZIuHCYuPteegn0gvUabwB2pFnyTB-sqNMnjetyPQq0BZmxfG08Q33eIYRjh4K2g0GGtBJ12qTSr9YeZvFh9YxFEmCwhNXNA4I2tW3a8yZ3pWqB0VV_XGCVCYO4ppLlg6qt8GXyTaMS1iyS8I1XQ8FmaLYgFDqe80PaqIROub5X0i5YswdssHANfqOG5Ri1Xqw3DJMg6ic5ytHBnmrquEisVYaysvrUdSkp7LK2tM6cFgwysnftt9jrBKVjIF8qUIgNPQJrUozE_T5nDiHzjXJxS0FeXmEi4SIq4RnZem_vpZP917te78eHWBG4yKj1zqariucle36RpxHFX9nMgKT8oYObDvvfXsWXYpt2AL70odqZY5QdecseKTUTc_FWhy-f8033LnTxK2c2cY571fKuEZgn2ab5hYTTgi62aYzLFYdZPCx-JQMPv8jKTswd330rdgaqNkWMrPTWhnZieTD_y6KcEnIHEjdWmkUxkQombDyPb-JhTvnANfpHSHr_kL-16Y9PjqDF872yWtBaP3rPEPt1W67-LCJdLGaME8i7I'
+    # for place in get_nearby_places(page_token=token, types=PLACE_TYPES, radius=1000):
     #     pprint(str(place), width=1000)
-    #     pprint(place.get_gmaps_link())
+
+    for place_index, place in enumerate(get_nearby_places(page_token="",types=PLACE_TYPES,radius=5000)):
+        print(place_index)
+        pprint(str(place), width=1000)
+        pprint(place.get_gmaps_link())
