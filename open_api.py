@@ -46,16 +46,27 @@ class TopPlaceQuery(NamedTuple):
     places: dict[Place, str]
 
 
-def get_top_places(queries: Iterable[TopPlaceQuery], log=False) -> list[Place | None]:
-    """
-    Given a sequence of queries, where each query consists of
-        a desired quality and a mapping of places to descriptions,
-    ask ChatGPT to choose the best place for the quality, for each query.
-    Each query results in a place or None if the prompt to ChatGPT fails or is in an unrecognizable format.
+def create_choices_prompt(places: dict[Place, str]) -> tuple[str, dict[str, Place]]:
+    choices = ""
+    choice_to_place = {}
 
-    :param queries: the list of queries.
+    for i, (place, description) in enumerate(places.items()):
+        identifier = f"[{i + 1}]"
+        choice_to_place[identifier] = place
+        choices += f"{identifier}: {description}\n"
+
+    return choices, choice_to_place
+
+
+def get_top_place(query: TopPlaceQuery, log=False) -> Place | None:
+    """
+    Given a query consisting of a desired quality and a mapping of places to descriptions,
+    ask ChatGPT to choose the best place for the quality.
+    Results in a place or None if the prompt to ChatGPT fails or is in an unrecognizable format.
+
+    :param query: the list of places.
     :param log: print the prompts and responses for debugging.
-    :return: the place that best matches the desired quality, for each query.
+    :return: the place that best matches the desired quality or None if the query failed.
     """
     # prompt engineering
     prologue = dedent("""
@@ -72,72 +83,105 @@ def get_top_places(queries: Iterable[TopPlaceQuery], log=False) -> list[Place | 
         The answer is [3].
     """)
 
-    prompts = [prologue]
-    places_to_choices = []
-    for query in queries:
-        desired_quality = query.desired_quality
-        places = query.places
-        quality_desc = dedent(f"""
-            The desired quality is {desired_quality}.
-        """)
-        choices = ""
-        place_to_choice = {}
+    desired_quality = query.desired_quality
 
-        for i, (place, description) in enumerate(places.items()):
-            identifier = f"[{i + 1}]"
-            place_to_choice[identifier] = place
-            choices += f"{identifier}: {description}\n"
+    quality_desc = dedent(f"""
+        The desired quality is {desired_quality}.
+    """)
 
-        epilogue = "The answer is "
+    choices, choice_to_place = create_choices_prompt(query.places)
 
-        prompt = quality_desc + choices + epilogue
+    epilogue = "The answer is "
 
-        if log:
-            print(f"Created prompt:\n{prompt}")
-        prompts.append(prompt)
-        places_to_choices.append(place_to_choice)
+    prompt = prologue + quality_desc + choices + epilogue
 
-    responses = send_prompts(prompts, log=log)
+    if log:
+        print(f"Created prompt:\n{prompt}")
 
-    results = []
-    for i, response in enumerate(responses):
-        if i == 0:
-            # first prompt is just to prep ChatGPT
+    responses = send_prompts([prompt], log=log)
+    response = responses[0]
+
+    if log:
+        print(f"Received response: {response}")
+
+    # try to parse the response
+
+    # Regex for `[3]`, `[92130]`, etc.
+    matches = re.findall("\[[0-9]+\]", response)
+    if len(matches) > 0:
+        try:
+            return choice_to_place[matches[0]]
+        except KeyError:
             if log:
-                print(f"Received response for opening prompt: {response}")
-            continue
-        if log:
-            print(f"Received response: {response}")
+                print(f"Response {response} did not match input choices!")
 
-        place_to_choice = places_to_choices[i]
-        # try to parse the response
-        # Regex for `[3].`, `[92130].`, etc.
-        matches = re.findall("\[[0-9]+\]\.", response)
-        query_result = None
-        if len(matches) > 0:
-            try:
-                query_result = place_to_choice[matches[0][:-1]]  # trim off period '.'
-            except KeyError:
-                if log:
-                    print(f"Response {response} did not match input choices!")
+    print(f"Response {response} did not match known formats!")
+    return None
 
-        # Regex for `[3]`, `[92130]`, etc.
-        matches = re.findall("\[[0-9]+\]", response)
-        if len(matches) > 0:
-            try:
-                query_result = place_to_choice[matches[0]]
-            except KeyError:
-                if log:
-                    print(f"Response {response} did not match input choices!")
 
+def rank_places(query: TopPlaceQuery, log=False) -> list[Place] | None:
+    """
+    Given a query consisting of a desired quality and a mapping of places to descriptions,
+    ask ChatGPT to rank the places for the quality.
+    Results in the ranked list of places or None if the prompt to ChatGPT fails or is in an unrecognizable format.
+
+    :param query: the query.
+    :param log: print the prompts and responses for debugging.
+    :return: the places ranked by desired quality or None if the query failed.
+    """
+    # prompt engineering
+    prologue = dedent("""
+        I'll give you a desired quality and a list of descriptions. 
+        Rank the descriptions by how well they match the desired quality. 
+        Respond with the numbers of the description, such as [1], [2], [3].
+
+        Here is one example:
+        The desired quality is rustic.
+        [1]: A high school classroom within a bustling city.
+        [2]: A modern bedroom within a suburb.
+        [3]: A quaint barn house in Iowa.
+        The answer is [3], [2], [1].
+    """)
+
+    desired_quality = query.desired_quality
+
+    quality_desc = dedent(f"""
+        The desired quality is {desired_quality}.
+    """)
+
+    choices, choice_to_place = create_choices_prompt(query.places)
+
+    epilogue = "The answer is "
+
+    prompt = prologue + quality_desc + choices + epilogue
+
+    if log:
+        print(f"Created prompt:\n{prompt}")
+
+    responses = send_prompts([prompt], log=log)
+    response = responses[0]
+
+    if log:
+        print(f"Received response: {response}")
+
+    # try to parse the response
+
+    # Regex for `[3]`, `[92130]`, etc.
+    matches = re.findall("\[[0-9]+\]", response)
+    if len(matches) > 0:
+        try:
+            return list(map(lambda match: choice_to_place[match], matches))
+        except KeyError:
+            if log:
+                print(f"Response {response} did not match input choices!")
+
+    if log:
         print(f"Response {response} did not match known formats!")
-        results.append(query_result)
-
-    return results
+    return None
 
 
 if __name__ == '__main__':
-    print(send_prompts(["Give me an example of a 'warm' location.", "Can you repeat what you just said?"], log=True))
+    # print(send_prompts(["Give me an example of a 'warm' location."], log=True))
     query1 = TopPlaceQuery(
         desired_quality="warm",
         places={
@@ -149,4 +193,24 @@ if __name__ == '__main__':
                 "The Los Angeles Public Library provides free and easy access to information, ideas, books and technology that enrich, educate and empower every individual in our city's diverse communities."
         }
     )
-    # print(get_top_places([query1], log=True))
+    query2 = TopPlaceQuery(
+        desired_quality="scenic",
+        places={
+            "Yosemite National Park":
+                dedent(
+                    """
+                    Yosemite National Park is in California’s Sierra Nevada mountains. 
+                    It’s famed for its giant, ancient sequoia trees, and for Tunnel View, 
+                    the iconic vista of towering Bridalveil Fall and the granite cliffs of El Capitan and Half Dome.
+                    """
+                ),
+            "Kresge Auditorium":
+                dedent(
+                    """
+                    Kresge Auditorium is an auditorium structure at the Massachusetts Institute of Technology, 
+                    located at 48 Massachusetts Avenue, Cambridge, Massachusetts.
+                    """
+                )
+        }
+    )
+    print(rank_places(query1, log=True))
