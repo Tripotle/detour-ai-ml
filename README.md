@@ -14,9 +14,10 @@ Resources:
   * Because a lot of "good" adjectives are the same
 
 
-Pip packages:
+Pip packages (requirements.txt included):
 * `python-dotenv`
 * `googlemaps`
+* `open-ai`
 
 Meeting with Zack:
 * Use Doc2Vec as a first pass preprocessing to filter thousands of locations -> few dozen
