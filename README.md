@@ -18,6 +18,7 @@ Pip packages (requirements.txt included):
 * `python-dotenv`
 * `googlemaps`
 * `open-ai`
+* `gensim`
 
 Meeting with Zack:
 * Use Doc2Vec as a first pass preprocessing to filter thousands of locations -> few dozen
