@@ -19,7 +19,8 @@ def get_polyline(origin=TEST_ORIGIN, destination=TEST_DESTINATION):
             destination=destination,
         )
         overview_polyline = query_result[0]['overview_polyline']['points']
-        return overview_polyline
+        distance = query_result[0]['legs'][0]['distance']['value']
+        return overview_polyline, distance
     except googlemaps.exceptions.ApiError as e:
         print(origin, destination)
         print("API Error!")
@@ -29,17 +30,23 @@ def get_waypoints(overview_polyline):
     waypoints = polyline.decode(overview_polyline)
     return waypoints
 
-def possible_detours(waypoints):
+def possible_detours(waypoints, distance, increment=20):
     detours = set()
-    for waypoint in waypoints[::10]:
-        for location in get_nearby_places(page_token="",location=waypoint,radius=5000):
-            detours.add(location)
+    detour_positions = set()
+    for waypoint in waypoints[::increment]:
+        for location in get_nearby_places(page_token="",location=waypoint,radius=distance/increment):
+            if location.position not in detour_positions:
+                detour_positions.add(location.position)
+                detours.add(location)
     
     return detours
 
 if __name__ == '__main__':
     # print(sys.version)
-    overview_polyline = get_polyline()
+    overview_polyline, distance = get_polyline()
     waypoints = get_waypoints(overview_polyline)
-    detours = possible_detours(waypoints)
-    print(detours)
+    detours = possible_detours(waypoints, distance, increment=50)
+    for place_index, place in enumerate(detours):
+        print(place_index)
+        pprint(str(place), width=1000)
+        pprint(place.get_gmaps_link())
