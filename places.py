@@ -191,17 +191,17 @@ def get_nearby_places(page_token: str = None, location=LOCATION, radius=200, typ
             if should_append:
                 result.append(parsed_place)
 
-        if 'next_page_token' in query_result.keys():
-            time.sleep(2)
-            result.extend(get_nearby_places(
-                page_token=query_result['next_page_token'],
-                location=location,
-                radius=radius,
-                types=types,
-                exclude_types=exclude_types
-            ))
+        # if 'next_page_token' in query_result.keys():
+        #     time.sleep(2)
+        #     result.extend(get_nearby_places(
+        #         page_token=query_result['next_page_token'],
+        #         location=location,
+        #         radius=radius,
+        #         types=types,
+        #         exclude_types=exclude_types
+        #     ))
 
-        else: print("no more next page")
+        # else: print("no more next page")
         
         return result
     except googlemaps.exceptions.ApiError as e:
