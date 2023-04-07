@@ -1,9 +1,10 @@
 from src import api
-import googlemaps
-import polyline
 from places import get_nearby_places
 import csv
 import random
+import googlemaps
+import polyline
+from pprint import pprint
 
 # TEST LOCATIONS
 TEST_ORIGIN = '48 Massachusetts Ave w16, Cambridge, MA 02139'
@@ -79,43 +80,30 @@ def get_detours(origin, destination):
     return list(detours)
 
 if __name__ == '__main__':
-    overview_polyline, distance = get_polyline(destination=NY_DESTINATION)
-    # print(polyline)
-    waypoints = get_waypoints(overview_polyline)
+    detours = get_detours(TEST_ORIGIN, TEST_DESTINATION)
+    for detour_index, detour in enumerate(detours):
+        print(detour_index)
+        pprint(str(detour), width=1000)
+        pprint(detour.get_gmaps_link())
 
-    # print(len(waypoints), distance)
-    detours = possible_detours(waypoints, distance, increment=1)
-    with open('out/test_plot.csv', 'w', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['name', 'lat', 'long'])
+    # with open('out/test_plot.csv', 'w', encoding='utf-8') as f:
+    #     writer = csv.writer(f)
+    #     writer.writerow(['name', 'lat', 'long'])
         
-        for place_index, place in enumerate(detours):
-            # print(place_index)
-            # pprint(str(place), width=1000)
-            # pprint(place.get_gmaps_link())
-            place_lat, place_long = place.position
-            place_name = place.name
-            writer.writerow([place_name, place_lat, place_long])
+    #     for place_index, place in enumerate(detours):
+    #         place_lat, place_long = place.position
+    #         place_name = place.name
+    #         writer.writerow([place_name, place_lat, place_long])
     
-    with open('out/test_plot.csv', newline='\n', encoding='utf-8') as csvfile:
-        random_detours = csv.reader(csvfile)
-        row_list = []
-        for row in random_detours:
-            row_list.append(row)
-        random_detours = random.choices(row_list, k=30)
+    # with open('out/test_plot.csv', newline='\n', encoding='utf-8') as csvfile:
+    #     random_detours = csv.reader(csvfile)
+    #     row_list = []
+    #     for row in random_detours:
+    #         row_list.append(row)
+    #     random_detours = random.choices(row_list, k=30)
     
-    with open('out/test_random.csv', 'w+', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['name', 'lat', 'long'])
-        for row in random_detours:
-            writer.writerow(row)
-        
-        # for place_index, place in enumerate(random_detours):
-        #     # print(place_index)
-        #     # pprint(str(place), width=1000)
-        #     # pprint(place.get_gmaps_link())
-        #     place_lat, place_long = place.position
-        #     place_name = place.name
-        #     writer.writerow([place_name, place_lat, place_long])
-
-    # get_reviews([1])
+    # with open('out/test_plot.csv', 'w+', encoding='utf-8') as f:
+    #     writer = csv.writer(f)
+    #     writer.writerow(['name', 'lat', 'long'])
+    #     for row in random_detours:
+    #         writer.writerow(row)
