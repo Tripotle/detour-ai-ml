@@ -1,5 +1,5 @@
 # Stores private info
-src/.env
+.env
 
 # Alex's IDE files
 .idea/

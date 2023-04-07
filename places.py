@@ -1,7 +1,8 @@
-from src import api
+import api
 import googlemaps
 from pprint import pprint
 import urllib.parse
+import time
 
 # Kresge
 TEST_ADDRESS = '48 Massachusetts Ave w16, Cambridge, MA 02139'
