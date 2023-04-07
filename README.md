@@ -1,4 +1,7 @@
 ML backend for Scenic Route Recommender AIM Labs Spring 2023
+* Large training data files are stored in `./data`, but are obviously not included in git. 
+  * Run `./data/downloader.py` to get these data files. 
+* Similarly, models are stored in `./models`, but not in git
 
 Resources:
 * [Google Maps Python API](https://github.com/googlemaps/google-maps-services-python)
@@ -18,6 +21,7 @@ Pip packages (requirements.txt included):
 * `python-dotenv`
 * `googlemaps`
 * `open-ai`
+* `gensim`
 
 Meeting with Zack:
 * Use Doc2Vec as a first pass preprocessing to filter thousands of locations -> few dozen
