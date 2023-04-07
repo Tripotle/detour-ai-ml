@@ -12,6 +12,7 @@ Resources:
 * Concatenate all adjectives (part of speech labeling)
 * not adjectives but nouns: hills, lakes, etc.
   * Because a lot of "good" adjectives are the same
+* https://medium.com/@yashwantltce/a-simple-way-to-find-places-along-the-route-using-google-maps-api-4237fb452ec2
 
 
 Pip packages (requirements.txt included):
