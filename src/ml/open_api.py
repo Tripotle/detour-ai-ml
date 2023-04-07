@@ -1,4 +1,4 @@
-import api
+from src import api
 # See https://platform.openai.com/docs/libraries/python-library
 # https://platform.openai.com/docs/api-reference/chat/create
 # Also https://pypi.org/project/openai/

@@ -1,8 +1,7 @@
-import api
+from src import api
 import googlemaps
 import polyline
-from pprint import pprint
-from places import get_nearby_places, Position
+from places import get_nearby_places
 import csv
 import random
 
