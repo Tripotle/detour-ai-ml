@@ -75,7 +75,9 @@ def get_reviews(detours):
 def get_detours(origin, destination):
     waypoints, distance = get_waypoints(origin=origin, destination=destination)
     detours = possible_detours(waypoints=waypoints, distance=distance)
-    get_reviews()
+    get_reviews(detours)
+    
+    return list(detours)
 
 if __name__ == '__main__':
     overview_polyline, distance = get_polyline(destination=NY_DESTINATION)
