@@ -130,7 +130,7 @@ class Location:
         self.name = name
         self.place_id = place_id
         self.types = types
-        self.information = None
+        self.information = []
 
     def get_gmaps_link(self) -> str:
         return f'https://www.google.com/maps/search/?api=1' \
