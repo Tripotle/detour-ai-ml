@@ -68,7 +68,7 @@ def get_reviews(detours):
             detour_results = query_result['result']
             if 'reviews' in detour_results.keys():
                 detour_reviews = detour_results['reviews']
-                detour.information = ' '.join([detour_review['text'] for detour_review in detour_reviews])
+                detour.information = [detour_review['text'] for detour_review in detour_reviews]
                 detours_with_reviews.append(detour)
         
         except googlemaps.exceptions.ApiError as e:

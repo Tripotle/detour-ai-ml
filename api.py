@@ -16,3 +16,6 @@ def get_openapi_api_key() -> str:
     :return: api key used to access OpenAPI services including ChatGPT
     """
     return os.getenv('OPENAI_API_KEY')
+
+def get_mapbox_api_key() -> str:
+    return os.getenv('MAPBOX_TOKEN')
