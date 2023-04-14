@@ -148,7 +148,7 @@ if __name__ == '__main__':
     #         if detour_review['text']: test.append(detour_review['text'])
     # print(test)
 
-    detours = get_detours(TEST_ORIGIN, TEST_DESTINATION, 30)
+    detours = get_detours(TEST_ORIGIN, TEST_DESTINATION, 1)
     for detour_index, detour in enumerate(detours):
         print(detour_index)
         pprint(str(detour), width=1000)
