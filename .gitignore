@@ -1,5 +1,5 @@
 # Stores private info
-.env
+**/.env
 
 # Alex's IDE files
 .idea/
@@ -8,4 +8,4 @@
 .DS_Store
 
 # This file created by python when it runs, should not be committed
-__pycache__
+**/__pycache__

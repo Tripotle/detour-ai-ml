@@ -9,11 +9,11 @@ from nicegui import ui
 from nicegui.element import Element
 from pprint import pprint
 
-import open_api
-from directions import *
-from places import Location, get_location_by_name
-from model import Model
-from open_api import *
+import ml.open_api as open_api
+from data_collection.directions import *
+from data_collection.places import Location, get_location_by_name
+from ml.model import Model
+from ml.open_api import *
 
 px.set_mapbox_access_token(api.get_mapbox_api_key())
 model = Model()

@@ -1,6 +1,6 @@
 import gensim
 from gensim.models.doc2vec import Doc2Vec
-from places import Location
+from data_collection.places import Location
 from numpy import dot
 from numpy.linalg import norm
 

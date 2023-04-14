@@ -1,5 +1,5 @@
 import api
-from places import get_nearby_places
+from data_collection.places import get_nearby_places
 import csv
 import random
 import googlemaps
