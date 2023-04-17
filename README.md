@@ -16,6 +16,13 @@ Resources:
 * not adjectives but nouns: hills, lakes, etc.
   * Because a lot of "good" adjectives are the same
 
+Efficiency
+* waypoints - come up with an algorithm that selects a set of waypoitns that does not have overlap
+* waypoints - generate new points beyond the route to perform more nearby searches
+* filtering - filter based on total reviews/rating?
+* reviews - google about (editorial summary), reviews, wikipedia (free), tripadvisor?
+* average word2vec
+* get routes through top-performing detours
 
 Pip packages (requirements.txt included):
 * `python-dotenv`
