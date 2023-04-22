@@ -1,7 +1,9 @@
 import api
-from data_collection.places import get_nearby_places
+from data_collection.places import *
 import csv
 import random
+from math import radians, cos
+import numpy as np
 import googlemaps
 import polyline
 import threading
@@ -12,7 +14,11 @@ TEST_ORIGIN = '48 Massachusetts Ave w16, Cambridge, MA 02139'
 TEST_DESTINATION = '2010 William J Day Blvd, Boston, MA 02127'
 NY_DESTINATION = 'City Park Hall, New York, NY 10007'
 
-# Position = tuple[float, float] # [lat, long]
+# MATHEMATICAL CONVERSIONS
+DEG_LAT_TO_M = 110574
+DEG_LONG_TO_M = 111320
+MAX_SEARCH_RADIUS = 35355 # 50000/sqrt(2)
+
 
 def get_waypoints(origin, destination):
     gmaps = googlemaps.Client(key=api.get_api_key())
@@ -23,9 +29,41 @@ def get_waypoints(origin, destination):
             destination=destination,
         )
         
-        overview_polyline = query_result[0]['overview_polyline']['points']
-        waypoints = polyline.decode(overview_polyline)
+        # overview_polyline = query_result[0]['overview_polyline']['points']
+        # waypoints = polyline.decode(overview_polyline)
         distance = query_result[0]['legs'][0]['distance']['value']
+        origin_position = query_result[0]['legs'][0]['start_location']
+        olat, olong = origin_position['lat'], origin_position['lng']
+        destination_position = query_result[0]['legs'][0]['end_location']
+        dlat, dlong = destination_position['lat'], destination_position['lng']
+        
+        alat, along = (olat+dlat)/2, (olong+dlong)/2
+        route_radius = distance/2
+        print(olat, olong)
+        print(dlat, dlong)
+        print(alat, along, route_radius)
+
+        # forming search box
+        lat_diff = route_radius/DEG_LAT_TO_M
+        long_diff = route_radius/(DEG_LONG_TO_M*cos(radians(alat)))
+        print(lat_diff, long_diff)
+        sb_minlat, sb_maxlat = alat-lat_diff, alat+lat_diff
+        sb_minlong, sb_maxlong = along-long_diff, along+long_diff
+
+        waypoints = []
+        for waypoint_lat in np.arange(sb_minlat, sb_maxlat, MAX_SEARCH_RADIUS/DEG_LAT_TO_M):
+            deg_long_to_m = DEG_LONG_TO_M*cos(radians(waypoint_lat))
+            for waypoint_long in np.arange(sb_minlong, sb_maxlong, MAX_SEARCH_RADIUS/deg_long_to_m):
+                waypoints.append((waypoint_lat, waypoint_long))
+
+        # query_result: list = gmaps.directions(
+        #     origin=origin,
+        #     destination=destination,
+        # )
+        
+        # overview_polyline = query_result[0]['overview_polyline']['points']
+        # waypoints = polyline.decode(overview_polyline)
+        # distance = query_result[0]['legs'][0]['distance']['value']
 
         return waypoints, distance
     
@@ -44,7 +82,7 @@ def possible_detours(waypoints, distance, increment=1):
         locations += get_nearby_places(
             page_token="",
             location=waypoint,
-            radius=100000,
+            radius=50000,
             exclude_types=[],
             types=['tourist_attraction']
         )
@@ -104,22 +142,6 @@ def get_reviews(detours):
     
     for thread in threads:
         thread.join()
-    # try:
-    #     query_result: dict = gmaps.place(
-    #         place_id=detour.place_id
-    #     )
-        
-    #     detour_results = query_result['result']
-    #     if 'reviews' in detour_results.keys():
-    #         detour_reviews = detour_results['reviews']
-    #         for detour_review in detour_reviews:
-    #             if detour_review['text']: detour.information.append(detour_review['text'])
-    #         if detour.information: detours_with_reviews.append(detour)
-    
-    # except googlemaps.exceptions.ApiError as e:
-    #     print(detour.name, detour.place_id)
-    #     print("API Error!")
-    #     raise e
     
     return detours_with_reviews
 

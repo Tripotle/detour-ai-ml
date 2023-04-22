@@ -2,7 +2,6 @@ import api
 import googlemaps
 from pprint import pprint
 import urllib.parse
-import time
 
 # Kresge
 TEST_ADDRESS = '48 Massachusetts Ave w16, Cambridge, MA 02139'
@@ -125,11 +124,13 @@ Position = tuple[float, float]  # [lat, long]
 
 class Location:
 
-    def __init__(self, name: str, position: Position, place_id: str, types: list[str]):
+    def __init__(self, name: str, position: Position, place_id: str, types: list[str], rating: int, num_ratings: int):
         self.position = position
         self.name = name
         self.place_id = place_id
         self.types = types
+        self.rating = rating
+        self.num_ratings = num_ratings
         self.information = []
 
     def get_gmaps_link(self) -> str:
@@ -144,15 +145,21 @@ class Location:
 def from_query_result(query_result: any) -> Location:
     return Location(name=query_result['name'],
                     position=(query_result['geometry']['location']['lat'], query_result['geometry']['location']['lng']),
-                    place_id=query_result['place_id'], types=query_result['types'])
+                    place_id=query_result['place_id'], 
+                    types=query_result['types'],
+                    rating=query_result['rating'] if 'rating' in query_result else 0,
+                    num_ratings=query_result['user_ratings_total'] if 'user_ratings_total' in query_result else 0,
+                    )
 
+def get_location_by_id(id: str) -> Location | None:
+    gmaps = googlemaps.Client(key=api.get_api_key())
 
 def get_location_by_name(name: str) -> Location | None:
     gmaps = googlemaps.Client(key=api.get_api_key())
     query_result = gmaps.places(
         query=name
     )
-    # pprint(query_result['results'][0])
+
     if len(query_result['results']) < 1:
         return None
     return from_query_result(query_result['results'][0])
@@ -172,14 +179,6 @@ def get_nearby_places(page_token: str = None, location=LOCATION, radius=200, typ
             type=", ".join(types),
             page_token=page_token,
         )
-        
-        # try:
-        #     print("next page token!")
-        #     pprint(query_result['next_page_token'])
-        # except KeyError:
-        #     print("no next page token!")
-        #     pprint(query_result)
-        #     pass
 
         result: list[Location] = []
         for place in query_result['results']:
@@ -189,20 +188,10 @@ def get_nearby_places(page_token: str = None, location=LOCATION, radius=200, typ
                 if type_name in exclude_types:
                     should_append = False
                     break
+            if parsed_place.rating < 4 or parsed_place.num_ratings < 50:
+                should_append = False
             if should_append:
                 result.append(parsed_place)
-
-        # if 'next_page_token' in query_result.keys():
-        #     time.sleep(2)
-        #     result.extend(get_nearby_places(
-        #         page_token=query_result['next_page_token'],
-        #         location=location,
-        #         radius=radius,
-        #         types=types,
-        #         exclude_types=exclude_types
-        #     ))
-
-        # else: print("no more next page")
         
         return result
     except googlemaps.exceptions.ApiError as e:
