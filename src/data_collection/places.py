@@ -132,7 +132,14 @@ def from_query_result(query_result: any) -> Location:
 
 def get_location_by_id(id: str) -> Location | None:
     gmaps = googlemaps.Client(key=api.get_api_key())
-    pass # unfinished, but maybe should write a function that directions.py can call so that it is more consistent?
+    query_result = gmaps.places(
+        query=id
+    )
+
+    if len(query_result['results']) < 1:
+        return None
+    return from_query_result(query_result['results'][0])
+
 
 def get_location_by_name(name: str) -> Location | None:
     gmaps = googlemaps.Client(key=api.get_api_key())

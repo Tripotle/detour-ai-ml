@@ -1,5 +1,6 @@
 from typing import List
 from data_collection.types import Location, Position
+from data_collection.places import get_location_by_id
 from data_collection.directions import get_detours
 
 
@@ -11,6 +12,8 @@ def get_locations(origin: str, destination: str) -> List[Location]:
     :param destination: the Google Maps Places id of the destination
     :return: see above
     """
+    origin = get_location_by_id(origin).position
+    destination = get_location_by_id(destination).position
     return get_detours(origin, destination)
 
 
