@@ -1,5 +1,6 @@
 import urllib.parse
 from typing import List
+from data_collection.directions import get_detours
 
 Position = tuple[float, float]  # [lat, long]
 
@@ -31,4 +32,4 @@ def get_locations(origin: str, destination: str) -> List[Location]:
     :param destination: the Google Maps Places id of the destination
     :return: see above
     """
-    pass
+    return get_detours(origin, destination)
