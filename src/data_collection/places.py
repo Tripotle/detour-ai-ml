@@ -1,7 +1,7 @@
 import api
 import googlemaps
 from pprint import pprint
-from data_collection import Location, Position
+from data_collection.types import Location, Position
 import urllib.parse
 
 # Kresge
