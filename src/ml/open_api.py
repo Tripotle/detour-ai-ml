@@ -42,7 +42,7 @@ Place = TypeVar("Place")
 
 
 class TopPlaceQuery(NamedTuple):
-    desired_quality: str
+    keyword: str
     places: dict[Place, str]
 
 
@@ -83,7 +83,7 @@ def get_top_place(query: TopPlaceQuery, log=False) -> Place | None:
         The answer is [3].
     """)
 
-    desired_quality = query.desired_quality
+    desired_quality = query.keyword
 
     quality_desc = dedent(f"""
         The desired quality is {desired_quality}.
@@ -143,7 +143,7 @@ def rank_places(query: TopPlaceQuery, log=False) -> list[Place] | None:
         The answer is [3], [2], [1].
     """)
 
-    desired_quality = query.desired_quality
+    desired_quality = query.keyword
 
     quality_desc = dedent(f"""
         The desired quality is {desired_quality}.
@@ -183,7 +183,7 @@ def rank_places(query: TopPlaceQuery, log=False) -> list[Place] | None:
 if __name__ == '__main__':
     # print(send_prompts(["Give me an example of a 'warm' location."], log=True))
     query1 = TopPlaceQuery(
-        desired_quality="warm",
+        keyword="warm",
         places={
             "NYC":
                 "The largest city in the United States.",
@@ -194,7 +194,7 @@ if __name__ == '__main__':
         }
     )
     query2 = TopPlaceQuery(
-        desired_quality="scenic",
+        keyword="scenic",
         places={
             "Yosemite National Park":
                 dedent(
@@ -214,3 +214,16 @@ if __name__ == '__main__':
         }
     )
     print(rank_places(query1, log=True))
+    # prologue = dedent("""
+    #         I'll give you a desired quality and a list of descriptions.
+    #         Rank the descriptions by how well they match the desired quality.
+    #         Respond with the numbers of the description, such as [1], [2], [3].
+    #
+    #         Here is one example:
+    #         The desired quality is rustic.
+    #         [1]: A high school classroom within a bustling city.
+    #         [2]: A modern bedroom within a suburb.
+    #         [3]: A quaint barn house in Iowa.
+    #         The answer is [3], [2], [1].
+    #     """)
+    # print(send_prompts([prologue], log=True))

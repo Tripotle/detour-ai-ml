@@ -27,3 +27,6 @@ class Model:
 
         result.sort(key=lambda x: x[1])
         return result
+
+    def compute_score(self, keyword: str, compare_to: str) -> float:
+        return self._cosine_similarity(keyword, compare_to)
