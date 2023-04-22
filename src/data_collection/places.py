@@ -6,7 +6,7 @@ import urllib.parse
 # Kresge
 TEST_ADDRESS = '48 Massachusetts Ave w16, Cambridge, MA 02139'
 # can get from geocode API
-LOCATION = (42.3581083, -71.0948251)
+TEST_LOCATION = (42.3581083, -71.0948251)
 
 # https://developers.google.com/maps/documentation/places/web-service/supported_types
 PLACE_TYPES: list[str] = [
@@ -153,6 +153,7 @@ def from_query_result(query_result: any) -> Location:
 
 def get_location_by_id(id: str) -> Location | None:
     gmaps = googlemaps.Client(key=api.get_api_key())
+    pass # unfinished, but maybe should write a function that directions.py can call so that it is more consistent?
 
 def get_location_by_name(name: str) -> Location | None:
     gmaps = googlemaps.Client(key=api.get_api_key())
