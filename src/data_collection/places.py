@@ -145,7 +145,7 @@ def get_location_by_name(name: str) -> Location | None:
     return from_query_result(query_result['results'][0])
 
 
-def get_nearby_places(page_token: str = None, location=LOCATION, radius=200, types=None, exclude_types=None) -> list[Location]:
+def get_nearby_places(page_token: str = None, location=TEST_LOCATION, radius=200, types=None, exclude_types=None) -> list[Location]:
     if types is None:
         types = PLACE_TYPES
     if exclude_types is None:
