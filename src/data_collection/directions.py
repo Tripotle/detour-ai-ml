@@ -14,6 +14,7 @@ TEST_ORIGIN = '48 Massachusetts Ave w16, Cambridge, MA 02139'
 TEST_DESTINATION = '2010 William J Day Blvd, Boston, MA 02127'
 NY_DESTINATION = 'City Park Hall, New York, NY 10007'
 
+
 # MATHEMATICAL CONVERSIONS
 DEG_LAT_TO_M = 110574
 DEG_LONG_TO_M = 111320
@@ -56,21 +57,13 @@ def get_waypoints(origin, destination):
             for waypoint_long in np.arange(sb_minlong, sb_maxlong, MAX_SEARCH_RADIUS/deg_long_to_m):
                 waypoints.append((waypoint_lat, waypoint_long))
 
-        # query_result: list = gmaps.directions(
-        #     origin=origin,
-        #     destination=destination,
-        # )
-        
-        # overview_polyline = query_result[0]['overview_polyline']['points']
-        # waypoints = polyline.decode(overview_polyline)
-        # distance = query_result[0]['legs'][0]['distance']['value']
-
         return waypoints, distance
     
     except googlemaps.exceptions.ApiError as e:
         print(origin, destination)
         print("API Error!")
         raise e
+
 
 def possible_detours(waypoints, distance, increment=1):
     detours = set()
@@ -95,14 +88,6 @@ def possible_detours(waypoints, distance, increment=1):
         threads[i].start()
         print(f'waypoint {i} was processed')
         # need to eventually adjust increment based on distance (or radius or both)
-        # locations = get_nearby_places(
-            # page_token="",
-            # location=waypoint,
-            # radius=100000,
-            # exclude_types=[],
-            # types=['tourist_attraction']
-        # )
-        # print(f'{len(locations)} for waypoint: {i}')
     
     for thread in threads:
         thread.join()
@@ -114,6 +99,7 @@ def possible_detours(waypoints, distance, increment=1):
     
     # print(detours)
     return detours
+
 
 def get_reviews(detours):
     gmaps = googlemaps.Client(key=api.get_api_key())
