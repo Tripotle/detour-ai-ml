@@ -132,13 +132,14 @@ def from_query_result(query_result: any) -> Location:
 
 def get_location_by_id(id: str) -> Location | None:
     gmaps = googlemaps.Client(key=api.get_api_key())
-    query_result = gmaps.places(
-        query=id
+    query_result = gmaps.place(
+        place_id=id
     )
+    # pprint(query_result)
+    # if len(query_result['results']) < 1:
+    #     return None
 
-    if len(query_result['results']) < 1:
-        return None
-    return from_query_result(query_result['results'][0])
+    return from_query_result(query_result['result'])
 
 
 def get_location_by_name(name: str) -> Location | None:

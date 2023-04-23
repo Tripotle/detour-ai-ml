@@ -1,7 +1,7 @@
 import math
 from typing import Dict, TypeVar
-import ml.model
-import ml.open_api
+import model
+import open_api
 
 Location = TypeVar("Location")
 
