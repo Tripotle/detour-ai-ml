@@ -7,7 +7,7 @@ TEST_ADDRESS = '48 Massachusetts Ave w16, Cambridge, MA 02139'
 
 
 def test_api(address=TEST_ADDRESS):
-    gmaps = googlemaps.Client(key=api.get_api_key())
+    gmaps = googlemaps.Client(key=api.get_google_api_key())
 
     try:
         place = gmaps.find_place(
@@ -29,5 +29,5 @@ def test_api(address=TEST_ADDRESS):
 
 
 if __name__ == '__main__':
-    print(f'api key is {api.get_api_key()}')
+    print(f'api key is {api.get_google_api_key()}')
     test_api()

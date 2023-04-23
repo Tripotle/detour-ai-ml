@@ -6,7 +6,7 @@ import dotenv
 dotenv.load_dotenv()
 
 
-def get_api_key() -> str:
+def get_google_api_key() -> str:
     return os.getenv('GOOGLE_MAPS_API_KEY')
 
 
@@ -19,3 +19,6 @@ def get_openapi_api_key() -> str:
 
 def get_mapbox_api_key() -> str:
     return os.getenv('MAPBOX_TOKEN')
+
+def get_backend_key() -> str:
+    return os.getenv('BACKEND_KEY')

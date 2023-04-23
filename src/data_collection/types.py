@@ -1,11 +1,12 @@
 import urllib.parse
+from dataclasses import dataclass
 
 
 Position = tuple[float, float]  # [lat, long]
 
-
+@dataclass
 class Location:
-    def __init__(self, name: str, position: Position, place_id: str, types: list[str], rating: int, num_ratings: int):
+    def __init__(self, name: str, position: Position, place_id: str, types: list[str], rating: float, num_ratings: int):
         self.position = position
         self.name = name
         self.place_id = place_id
@@ -18,6 +19,9 @@ class Location:
         return f'https://www.google.com/maps/search/?api=1' \
                f'&query={urllib.parse.quote(self.name)}' \
                f'&query_place_id={urllib.parse.quote(self.place_id)}'
+
+    def __hash__(self):
+        return hash(self.place_id)
 
     def __str__(self):
         return f'{self.name}, ID: {self.place_id}, types: {", ".join(self.types)}'

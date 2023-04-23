@@ -126,12 +126,12 @@ def from_query_result(query_result: any) -> Location:
                     position=(query_result['geometry']['location']['lat'], query_result['geometry']['location']['lng']),
                     place_id=query_result['place_id'], 
                     types=query_result['types'],
-                    rating=query_result['rating'] if 'rating' in query_result else 0,
+                    rating=float(query_result['rating']) if 'rating' in query_result else 0,
                     num_ratings=query_result['user_ratings_total'] if 'user_ratings_total' in query_result else 0,
                     )
 
 def get_location_by_id(id: str) -> Location | None:
-    gmaps = googlemaps.Client(key=api.get_api_key())
+    gmaps = googlemaps.Client(key=api.get_google_api_key())
     query_result = gmaps.place(
         place_id=id
     )
@@ -143,7 +143,7 @@ def get_location_by_id(id: str) -> Location | None:
 
 
 def get_location_by_name(name: str) -> Location | None:
-    gmaps = googlemaps.Client(key=api.get_api_key())
+    gmaps = googlemaps.Client(key=api.get_google_api_key())
     query_result = gmaps.places(
         query=name
     )
@@ -158,7 +158,7 @@ def get_nearby_places(page_token: str = None, location=TEST_LOCATION, radius=200
         types = PLACE_TYPES
     if exclude_types is None:
         exclude_types = EXCLUDE_PLACE_TYPES
-    gmaps = googlemaps.Client(key=api.get_api_key())
+    gmaps = googlemaps.Client(key=api.get_google_api_key())
 
     try:
         query_result: dict = gmaps.places_nearby(

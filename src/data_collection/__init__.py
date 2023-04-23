@@ -3,7 +3,6 @@ from data_collection.types import Location, Position
 from data_collection.places import get_location_by_id
 from data_collection.directions import get_detours
 
-
 def get_locations(origin: str, destination: str) -> List[Location]:
     """
     Given an origin and a destination, return a list of possible detour locations.
@@ -15,7 +14,6 @@ def get_locations(origin: str, destination: str) -> List[Location]:
     origin = get_location_by_id(origin).position
     destination = get_location_by_id(destination).position
     return get_detours(origin, destination)
-
 
 if __name__ == '__main__':
     # Strictly for testing only

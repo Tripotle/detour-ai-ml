@@ -22,7 +22,7 @@ MAX_SEARCH_RADIUS = 35355 # 50000/sqrt(2)
 
 
 def get_waypoints(origin, destination):
-    gmaps = googlemaps.Client(key=api.get_api_key())
+    gmaps = googlemaps.Client(key=api.get_google_api_key())
     
     try: 
         query_result: list = gmaps.directions(
@@ -102,7 +102,7 @@ def possible_detours(waypoints, distance, increment=1):
 
 
 def get_reviews(detours):
-    gmaps = googlemaps.Client(key=api.get_api_key())
+    gmaps = googlemaps.Client(key=api.get_google_api_key())
     detours_with_reviews = []
     threads = []
     detours_with_reviews = []
