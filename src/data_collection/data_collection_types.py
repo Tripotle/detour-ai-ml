@@ -1,12 +1,13 @@
 import urllib.parse
 from dataclasses import dataclass
 
+from typing import Tuple, List
 
-Position = tuple[float, float]  # [lat, long]
+Position = Tuple[float, float]  # [lat, long]
 
 @dataclass
 class Location:
-    def __init__(self, name: str, position: Position, place_id: str, types: list[str], rating: float, num_ratings: int):
+    def __init__(self, name: str, position: Position, place_id: str, types: List[str], rating: float, num_ratings: int):
         self.position = position
         self.name = name
         self.place_id = place_id

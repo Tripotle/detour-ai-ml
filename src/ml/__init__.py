@@ -1,10 +1,11 @@
 import math
 from typing import Dict, TypeVar
-import ml.model as model
-import ml.open_api as open_api
+import ml.model
+import ml.open_api
 
 Location = TypeVar("Location")
 
+base_model = model.Model()
 
 def get_score(keyword: str, locations: Dict[Location, str]) -> Dict[Location, float]:
     """
@@ -17,11 +18,12 @@ def get_score(keyword: str, locations: Dict[Location, str]) -> Dict[Location, fl
     :return: dictionary of (Location - score) where score in [-1, 1]
     """
 
+    print("getting ml scores from ml module")
     base_model_score: Dict[Location, float] = {}
-    base_model = model.Model()
+    print("init model")
     for (location, info) in locations.items():
         base_model_score[location] = base_model.compute_score(keyword, info)
-
+    print("got scores from model")
     sorted_base = sorted(base_model_score.keys(), key=lambda x: base_model_score[x])
 
     # Estimate number of tokens to avoid reaching OpenApi's 4097 token request limit

@@ -1,0 +1,7 @@
+runtime: python311
+env_variables:
+  PYTHONPATH: "./src"
+instance_class: F4_1G
+#automatic_scaling:
+#  max_concurrent_requests: 2
+#entrypoint: gunicorn -b :$PORT -w 2 wsgi:app

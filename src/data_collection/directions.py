@@ -1,5 +1,5 @@
 import api
-from data_collection.places import *
+from data_collection.places import get_nearby_places
 import csv
 import random
 from math import radians, cos

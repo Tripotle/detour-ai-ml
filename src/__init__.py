@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import json
 import math
 from typing import List
 from dataclasses import dataclass, asdict
+from data_collection import Location
 import data_collection
 import ml
-from data_collection import Location
 
 
 @dataclass
@@ -46,6 +48,7 @@ def get_detours(
 
     # get all possible detours
     possible_detours = data_collection.get_locations(origin, destination)
+    print("got all possible detours")
 
     # get the model evaluation
     def detour_to_info_string(detour: Location) -> str:
@@ -53,6 +56,7 @@ def get_detours(
 
     ml_scores = ml.get_score(keyword,
                              {detour: detour_to_info_string(detour) for detour in possible_detours})
+    print("got ml scores")
 
     # filter only the most relevant
     FILTER_THRESHOLD = 0.55  # kinda arbitrary
@@ -85,6 +89,7 @@ def get_detours(
 
     detours_info = map(to_detour_info, filtered_detours)
     detours_info = list(sorted(detours_info, key=lambda info: info.total_score, reverse=True))
+    print("returning result")
 
     return DetourQueryResult(
         results=detours_info[:target_count],

@@ -1,0 +1,6 @@
+data/
+experiments/
+src/gui.py
+README.md
+**/.gitignore
+.git

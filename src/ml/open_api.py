@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import api
 # See https://platform.openai.com/docs/libraries/python-library
 # https://platform.openai.com/docs/api-reference/chat/create
@@ -7,7 +9,7 @@ from textwrap import dedent
 # https://regexr.com/
 import re
 
-from typing import TypeVar, Iterable, NamedTuple
+from typing import TypeVar, Iterable, NamedTuple, List, Tuple, Dict
 
 openai.api_key = api.get_openapi_api_key()
 
@@ -15,7 +17,7 @@ MODEL = "gpt-3.5-turbo"
 MAX_TOKENS = 100
 
 
-def send_prompts(prompts: Iterable[str] = None, log=False) -> list[str]:
+def send_prompts(prompts: Iterable[str] = None, log=False) -> List[str]:
     """
     Sends a series of prompts to ChatGPT and receives responses.
 
@@ -43,10 +45,10 @@ Place = TypeVar("Place")
 
 class TopPlaceQuery(NamedTuple):
     keyword: str
-    places: dict[Place, str]
+    places: Dict[Place, str]
 
 
-def create_choices_prompt(places: dict[Place, str]) -> tuple[str, dict[str, Place]]:
+def create_choices_prompt(places: Dict[Place, str]) -> Tuple[str, Dict[str, Place]]:
     choices = ""
     choice_to_place = {}
 

@@ -1,8 +1,11 @@
+from __future__ import annotations
 import api
 import googlemaps
 from pprint import pprint
-from data_collection.types import Location, Position
+from data_collection.data_collection_types import Location, Position
 import urllib.parse
+
+from typing import List
 
 # Kresge
 TEST_ADDRESS = '48 Massachusetts Ave w16, Cambridge, MA 02139'
@@ -10,7 +13,7 @@ TEST_ADDRESS = '48 Massachusetts Ave w16, Cambridge, MA 02139'
 TEST_LOCATION = (42.3581083, -71.0948251)
 
 # https://developers.google.com/maps/documentation/places/web-service/supported_types
-PLACE_TYPES: list[str] = [
+PLACE_TYPES: List[str] = [
     "amusement_park",
     "aquarium",
     "art_gallery",
@@ -34,7 +37,7 @@ PLACE_TYPES: list[str] = [
     "route",
 ]
 
-EXCLUDE_PLACE_TYPES: list[str] = [
+EXCLUDE_PLACE_TYPES: List[str] = [
     "accounting",
     "airport",
     "atm",
