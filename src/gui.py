@@ -1,5 +1,5 @@
 import asyncio
-import pprint
+from pprint import pprint
 import random
 import datetime
 
@@ -22,7 +22,7 @@ origin_name: str = "MIT"
 origin: Location | None = None
 dest_name: str = "Boston"
 dest: Location | None = None
-interval = 30
+interval = 1
 keyword = ""
 detours = None
 
@@ -60,14 +60,14 @@ async def submit_route():
         return
     update_place_info(origin_info, origin_name)
     update_place_info(dest_info, dest_name)
-    waypoints, distance = get_waypoints(origin_name, dest_name)
+    waypoints, origin_pos, dest_pos, distance = get_waypoints(origin_name, dest_name)
     update_route_info(waypoints, distance)
     await asyncio.sleep(0.1)  # get the ui to update asyncly. this is stupid, but it works for some reason
     print(f"getting detours at {datetime.datetime.now()}")
-    detours_without_reviews = get_detours(origin_name, dest_name, increment=interval)
-    detours_with_reviews = get_reviews(detours_without_reviews)
-    detours = detours_with_reviews
-    update_detours_info(detours_with_reviews)
+    # detours_without_reviews = possible_detours(waypoints, origin_pos, dest_pos, increment=interval)
+    # detours_with_reviews = get_reviews(detours_without_reviews)
+    detours = get_detours(origin_name, dest_name)
+    update_detours_info(detours)
 
 def update_place_info(container: Element, name: str):
     container.clear()
@@ -84,6 +84,7 @@ def update_place_info(container: Element, name: str):
         with container:
             ui.label(f"Error retrieving location.")
     ui.update(container)
+
 def update_route_info(waypoints: list[tuple[float, float]], distance: float):
     route_info.clear()
     df = pd.DataFrame(waypoints, columns=["lat", "lon"])
@@ -110,6 +111,7 @@ def update_detours_info(detours: list[Location]):
     with detour_info:
         ui.plotly(fig).classes('w-full h-200')
         # print(f"plotted mapbox at {datetime.datetime.now()}")
+
 def update_random_detour_info(detours: list[Location]):
     random_index = random.randint(0, len(detours)- 1)
     random_detour = detours[random_index]
