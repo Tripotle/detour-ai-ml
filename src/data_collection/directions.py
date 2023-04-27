@@ -70,7 +70,7 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
         if route_distance < 100000:
             overview_polyline = query_result[0]['overview_polyline']['points']
             waypoints = polyline.decode(overview_polyline)
-            return waypoints, origin_pos, dest_pos, float(route_distance)
+            return waypoints[::5], origin_pos, dest_pos, float(route_distance)
         
         # new method of calculating waypoints
         # center/average (a) latitude and longitude
@@ -147,7 +147,7 @@ def get_reviews(detours: List[Location]):
 
     def get_reviews_multithread(detour):
         detour_with_review = get_place_reviews(detour)
-        detours_with_reviews.append(detour_with_review)
+        if detour_with_review: detours_with_reviews.append(detour_with_review)
         
     for i, detour in enumerate(detours):
         threads.append(threading.Thread(
@@ -165,9 +165,9 @@ def get_reviews(detours: List[Location]):
     return detours_with_reviews
 
 
-def get_detours(origin, destination, increment=1):
-    waypoints, distance = get_waypoints(origin=origin, destination=destination)
-    detours = possible_detours(waypoints=waypoints, distance=distance, increment=increment)
+def get_detours(origin: str | Position, destination: str | Position, increment=1):
+    waypoints, origin_pos, dest_pos, route_distance = get_waypoints(origin=origin, destination=destination)
+    detours = possible_detours(waypoints=waypoints, origin=origin_pos, destination=dest_pos, increment=increment)
     detours_with_reviews = get_reviews(detours)
     
     return list(detours_with_reviews)
