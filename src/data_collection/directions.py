@@ -26,7 +26,11 @@ EARTH_RADIUS = 6371000
 def calculate_distance(position1: Position, position2: Position) -> float:
     p1_lat, p1_long = position1
     p2_lat, p2_long = position2
-    return EARTH_RADIUS * acos(sin(radians(p1_lat))*sin(radians(p2_lat)) + cos(radians(p1_lat))*cos(radians(p2_lat))*cos(radians(p2_long-p1_long)))
+    p1_lat = radians(90-p1_lat)
+    p2_lat = radians(90-p2_lat)
+    # print(EARTH_RADIUS * acos(cos(p1_lat)*cos(p2_lat) + sin(p1_lat)*sin(p2_lat)*cos(radians(p2_long-p1_long))))
+    return EARTH_RADIUS * acos(cos(p1_lat)*cos(p2_lat) + sin(p1_lat)*sin(p2_lat)*cos(radians(p2_long-p1_long)))
+
 
 def position_filter(origin: Position, destination: Position, detour: Position) ->  bool:
     # returns True if we should keep filter
@@ -39,7 +43,8 @@ def position_filter(origin: Position, destination: Position, detour: Position) -
 
     return (within_lat or within_long)
 
-def get_waypoints(origin: Position, destination: Position) -> tuple[List[Location], float]:
+
+def get_waypoints(origin: Position, destination: Position, max_distance: float | None = None) -> tuple[List[Location], float]:
     gmaps = googlemaps.Client(key=api.get_google_api_key())
     
     try: 
@@ -55,20 +60,19 @@ def get_waypoints(origin: Position, destination: Position) -> tuple[List[Locatio
         # origin (o) and destination (d) positions
         origin_position = query_result[0]['legs'][0]['start_location']
         olat, olong = origin_position['lat'], origin_position['lng']
+        origin_pos = (olat, olong)
         destination_position = query_result[0]['legs'][0]['end_location']
         dlat, dlong = destination_position['lat'], destination_position['lng']
+        dest_pos = (dlat, dlong)
+        if max_distance == None: max_distance = 1.2*calculate_distance(origin_pos, dest_pos)
         
         # center/average (a) latitude and longitude
         alat, along = (olat+dlat)/2, (olong+dlong)/2
         route_radius = route_distance/2
-        # print(olat, olong)
-        # print(dlat, dlong)
-        # print(alat, along, route_radius)
 
         # forming search box (sb)
         lat_diff = route_radius/DEG_LAT_TO_M
         long_diff = route_radius/(DEG_LONG_TO_M*cos(radians(alat)))
-        # print(lat_diff, long_diff)
         sb_minlat, sb_maxlat = alat-lat_diff, alat+lat_diff
         sb_minlong, sb_maxlong = along-long_diff, along+long_diff
 
@@ -76,7 +80,9 @@ def get_waypoints(origin: Position, destination: Position) -> tuple[List[Locatio
         for waypoint_lat in np.arange(sb_minlat, sb_maxlat, MAX_SEARCH_RADIUS/DEG_LAT_TO_M):
             deg_long_to_m = DEG_LONG_TO_M*cos(radians(waypoint_lat))
             for waypoint_long in np.arange(sb_minlong, sb_maxlong, MAX_SEARCH_RADIUS/deg_long_to_m):
-                if position_filter(origin, destination, (waypoint_lat, waypoint_long)):
+                waypoint_pos = (waypoint_lat, waypoint_long)
+                if not position_filter(origin_pos, dest_pos, waypoint_pos): continue
+                if calculate_distance(origin_pos, waypoint_pos) + calculate_distance(dest_pos, waypoint_pos) < max_distance:
                     waypoints.append((waypoint_lat, waypoint_long))
 
         return waypoints, route_distance
@@ -87,7 +93,7 @@ def get_waypoints(origin: Position, destination: Position) -> tuple[List[Locatio
         raise e
 
 
-def possible_detours(waypoints, origin, destination, route_distance, max_distance=None, increment=1):
+def possible_detours(waypoints, origin, destination, increment=1):
     detours = set()
     detour_positions = set()
     threads = []
@@ -159,12 +165,14 @@ def get_reviews(detours):
     
     return detours_with_reviews
 
+
 def get_detours(origin, destination, increment=1):
     waypoints, distance = get_waypoints(origin=origin, destination=destination)
     detours = possible_detours(waypoints=waypoints, distance=distance, increment=increment)
     detours_with_reviews = get_reviews(detours)
     
     return list(detours_with_reviews)
+
 
 if __name__ == '__main__':
     # print("Success!")
