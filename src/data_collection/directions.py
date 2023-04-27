@@ -44,7 +44,7 @@ def position_filter(origin: Position, destination: Position, detour: Position) -
     return (within_lat or within_long)
 
 
-def get_waypoints(origin: Position, destination: Position, max_distance: float | None = None) -> tuple[List[Location], float]:
+def get_waypoints(origin: str | Position, destination: str | Position, max_distance: float | None = None) -> tuple[List[Position], Position, Position]:
     gmaps = googlemaps.Client(key=api.get_google_api_key())
     
     try: 
@@ -85,7 +85,7 @@ def get_waypoints(origin: Position, destination: Position, max_distance: float |
                 if calculate_distance(origin_pos, waypoint_pos) + calculate_distance(dest_pos, waypoint_pos) < max_distance:
                     waypoints.append((waypoint_lat, waypoint_long))
 
-        return waypoints, route_distance
+        return waypoints, origin_pos, dest_pos
     
     except googlemaps.exceptions.ApiError as e:
         print(origin, destination)
@@ -93,13 +93,13 @@ def get_waypoints(origin: Position, destination: Position, max_distance: float |
         raise e
 
 
-def possible_detours(waypoints, origin, destination, increment=1):
+def possible_detours(waypoints: List[Position], origin: Position, destination: Position, increment=1) -> List[Location]:
     detours = set()
     detour_positions = set()
     threads = []
     locations = []
 
-    def get_nearby_places_multithread(waypoint, locations, index):
+    def get_nearby_places_multithread(waypoint, locations):
         locations += get_nearby_places(
             page_token="",
             location=waypoint,
@@ -111,13 +111,12 @@ def possible_detours(waypoints, origin, destination, increment=1):
     for i, waypoint in enumerate(waypoints[::increment]):
         threads.append(threading.Thread(
             target=get_nearby_places_multithread, 
-            args=(waypoint, locations, i)
+            args=(waypoint, locations)
         ))
         threads[i].start()
         # prevents more than 100 requests per second
         if i+1 % 100 == 0: time.sleep(1)
         print(f'waypoint {i} was processed')
-        # need to eventually adjust increment based on distance (or radius or both)
     
     for thread in threads:
         thread.join()
@@ -133,7 +132,7 @@ def possible_detours(waypoints, origin, destination, increment=1):
     return detours
 
 
-def get_reviews(detours):
+def get_reviews(detours: List[Location]):
     gmaps = googlemaps.Client(key=api.get_google_api_key())
     detours_with_reviews = []
     threads = []

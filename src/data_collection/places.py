@@ -130,7 +130,7 @@ def from_query_result(query_result: any) -> Location:
                     place_id=query_result['place_id'], 
                     types=query_result['types'],
                     rating=float(query_result['rating']) if 'rating' in query_result else 0.0,
-                    num_ratings=query_result['user_ratings_total'] if 'user_ratings_total' in query_result else 0.0,
+                    num_ratings=query_result['user_ratings_total'] if 'user_ratings_total' in query_result else 0,
                     )
 
 def get_location_by_id(id: str) -> Location | None:
@@ -176,7 +176,7 @@ def get_nearby_places(page_token: str = None, location=TEST_LOCATION, radius=200
                 if type_name in exclude_types:
                     should_append = False
                     break
-            if parsed_place.rating < 4 or parsed_place.num_ratings < 50:
+            if parsed_place.rating < 4 or parsed_place.num_ratings < 100:
                 should_append = False
             if should_append:
                 result.append(parsed_place)
