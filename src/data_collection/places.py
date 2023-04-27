@@ -129,8 +129,8 @@ def from_query_result(query_result: any) -> Location:
                     position=(query_result['geometry']['location']['lat'], query_result['geometry']['location']['lng']),
                     place_id=query_result['place_id'], 
                     types=query_result['types'],
-                    rating=float(query_result['rating']) if 'rating' in query_result else 0,
-                    num_ratings=query_result['user_ratings_total'] if 'user_ratings_total' in query_result else 0,
+                    rating=float(query_result['rating']) if 'rating' in query_result else 0.0,
+                    num_ratings=query_result['user_ratings_total'] if 'user_ratings_total' in query_result else 0.0,
                     )
 
 def get_location_by_id(id: str) -> Location | None:
@@ -138,9 +138,6 @@ def get_location_by_id(id: str) -> Location | None:
     query_result = gmaps.place(
         place_id=id
     )
-    # pprint(query_result)
-    # if len(query_result['results']) < 1:
-    #     return None
 
     return from_query_result(query_result['result'])
 

@@ -1,13 +1,15 @@
 import api
-from data_collection.places import get_nearby_places
-import csv
-import random
+from data_collection.places import *
+import googlemaps
 from math import radians, cos
 import numpy as np
-import googlemaps
-import polyline
 import threading
+import time
+import sqlite3
 from pprint import pprint
+import csv
+import random
+import polyline
 
 # TEST LOCATIONS
 TEST_ORIGIN = '48 Massachusetts Ave w16, Cambridge, MA 02139'
@@ -21,7 +23,7 @@ DEG_LONG_TO_M = 111320
 MAX_SEARCH_RADIUS = 35355 # 50000/sqrt(2)
 
 
-def get_waypoints(origin, destination):
+def get_waypoints(origin, destination) -> tuple[List[Location], float]:
     gmaps = googlemaps.Client(key=api.get_google_api_key())
     
     try: 
@@ -33,21 +35,24 @@ def get_waypoints(origin, destination):
         # overview_polyline = query_result[0]['overview_polyline']['points']
         # waypoints = polyline.decode(overview_polyline)
         distance = query_result[0]['legs'][0]['distance']['value']
+        
+        # origin (o) and destination (d) positions
         origin_position = query_result[0]['legs'][0]['start_location']
         olat, olong = origin_position['lat'], origin_position['lng']
         destination_position = query_result[0]['legs'][0]['end_location']
         dlat, dlong = destination_position['lat'], destination_position['lng']
         
+        # center/average (a) latitude and longitude
         alat, along = (olat+dlat)/2, (olong+dlong)/2
         route_radius = distance/2
-        print(olat, olong)
-        print(dlat, dlong)
-        print(alat, along, route_radius)
+        # print(olat, olong)
+        # print(dlat, dlong)
+        # print(alat, along, route_radius)
 
-        # forming search box
+        # forming search box (sb)
         lat_diff = route_radius/DEG_LAT_TO_M
         long_diff = route_radius/(DEG_LONG_TO_M*cos(radians(alat)))
-        print(lat_diff, long_diff)
+        # print(lat_diff, long_diff)
         sb_minlat, sb_maxlat = alat-lat_diff, alat+lat_diff
         sb_minlong, sb_maxlong = along-long_diff, along+long_diff
 
@@ -57,7 +62,7 @@ def get_waypoints(origin, destination):
             for waypoint_long in np.arange(sb_minlong, sb_maxlong, MAX_SEARCH_RADIUS/deg_long_to_m):
                 waypoints.append((waypoint_lat, waypoint_long))
 
-        return waypoints, distance
+        return waypoints
     
     except googlemaps.exceptions.ApiError as e:
         print(origin, destination)
@@ -65,7 +70,7 @@ def get_waypoints(origin, destination):
         raise e
 
 
-def possible_detours(waypoints, distance, increment=1):
+def possible_detours(waypoints, max_distance=None, increment=1):
     detours = set()
     detour_positions = set()
     threads = []
@@ -86,6 +91,8 @@ def possible_detours(waypoints, distance, increment=1):
             args=(waypoint, locations, i)
         ))
         threads[i].start()
+        # prevents more than 100 requests per second
+        if i+1 % 100 == 0: time.sleep(1)
         print(f'waypoint {i} was processed')
         # need to eventually adjust increment based on distance (or radius or both)
     
@@ -124,6 +131,8 @@ def get_reviews(detours):
             args=(detour,)
         ))
         threads[i].start()
+        # prevents more than 100 requests per second
+        if i+1 % 100 == 0: time.sleep(1)
         print(f'detour {i} was processed')
     
     for thread in threads:
