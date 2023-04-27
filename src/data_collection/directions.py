@@ -1,7 +1,7 @@
 import api
 from data_collection.places import *
 import googlemaps
-from math import radians, cos, acos
+from math import radians, sin, cos, acos
 import numpy as np
 import threading
 import time
@@ -21,9 +21,12 @@ NY_DESTINATION = 'City Park Hall, New York, NY 10007'
 DEG_LAT_TO_M = 110574
 DEG_LONG_TO_M = 111320
 MAX_SEARCH_RADIUS = 35355 # 50000/sqrt(2)
+EARTH_RADIUS = 6371000
 
 def calculate_distance(position1: Position, position2: Position) -> float:
-    pass
+    p1_lat, p1_long = position1
+    p2_lat, p2_long = position2
+    return EARTH_RADIUS * acos(sin(radians(p1_lat))*sin(radians(p2_lat)) + cos(radians(p1_lat))*cos(radians(p2_lat))*cos(radians(p2_long-p1_long)))
 
 def position_filter(origin: Position, destination: Position, detour: Position) ->  bool:
     # returns True if we should keep filter
@@ -34,7 +37,7 @@ def position_filter(origin: Position, destination: Position, detour: Position) -
     within_lat = olat < detour_lat < dlat or dlat < detour_lat < olat
     within_long = olong < detour_long < dlong or dlong < detour_long < olong
 
-    return within_lat or within_long
+    return (within_lat or within_long)
 
 def get_waypoints(origin: Position, destination: Position) -> tuple[List[Location], float]:
     gmaps = googlemaps.Client(key=api.get_google_api_key())
@@ -47,7 +50,7 @@ def get_waypoints(origin: Position, destination: Position) -> tuple[List[Locatio
         
         # overview_polyline = query_result[0]['overview_polyline']['points']
         # waypoints = polyline.decode(overview_polyline)
-        distance = query_result[0]['legs'][0]['distance']['value']
+        route_distance = query_result[0]['legs'][0]['distance']['value']
         
         # origin (o) and destination (d) positions
         origin_position = query_result[0]['legs'][0]['start_location']
@@ -57,7 +60,7 @@ def get_waypoints(origin: Position, destination: Position) -> tuple[List[Locatio
         
         # center/average (a) latitude and longitude
         alat, along = (olat+dlat)/2, (olong+dlong)/2
-        route_radius = distance/2
+        route_radius = route_distance/2
         # print(olat, olong)
         # print(dlat, dlong)
         # print(alat, along, route_radius)
@@ -76,7 +79,7 @@ def get_waypoints(origin: Position, destination: Position) -> tuple[List[Locatio
                 if position_filter(origin, destination, (waypoint_lat, waypoint_long)):
                     waypoints.append((waypoint_lat, waypoint_long))
 
-        return waypoints, distance
+        return waypoints, route_distance
     
     except googlemaps.exceptions.ApiError as e:
         print(origin, destination)
@@ -84,7 +87,7 @@ def get_waypoints(origin: Position, destination: Position) -> tuple[List[Locatio
         raise e
 
 
-def possible_detours(waypoints, origin, destination, max_distance=None, increment=1):
+def possible_detours(waypoints, origin, destination, route_distance, max_distance=None, increment=1):
     detours = set()
     detour_positions = set()
     threads = []
