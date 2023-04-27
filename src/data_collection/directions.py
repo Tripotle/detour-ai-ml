@@ -1,7 +1,7 @@
 import api
 from data_collection.places import *
 import googlemaps
-from math import radians, cos
+from math import radians, cos, acos
 import numpy as np
 import threading
 import time
@@ -22,8 +22,21 @@ DEG_LAT_TO_M = 110574
 DEG_LONG_TO_M = 111320
 MAX_SEARCH_RADIUS = 35355 # 50000/sqrt(2)
 
+def calculate_distance(position1: Position, position2: Position) -> float:
+    pass
 
-def get_waypoints(origin, destination) -> tuple[List[Location], float]:
+def position_filter(origin: Position, destination: Position, detour: Position) ->  bool:
+    # returns True if we should keep filter
+    olat, olong = origin
+    dlat, dlong = destination
+    detour_lat, detour_long = detour
+    
+    within_lat = olat < detour_lat < dlat or dlat < detour_lat < olat
+    within_long = olong < detour_long < dlong or dlong < detour_long < olong
+
+    return within_lat or within_long
+
+def get_waypoints(origin: Position, destination: Position) -> tuple[List[Location], float]:
     gmaps = googlemaps.Client(key=api.get_google_api_key())
     
     try: 
@@ -60,9 +73,10 @@ def get_waypoints(origin, destination) -> tuple[List[Location], float]:
         for waypoint_lat in np.arange(sb_minlat, sb_maxlat, MAX_SEARCH_RADIUS/DEG_LAT_TO_M):
             deg_long_to_m = DEG_LONG_TO_M*cos(radians(waypoint_lat))
             for waypoint_long in np.arange(sb_minlong, sb_maxlong, MAX_SEARCH_RADIUS/deg_long_to_m):
-                waypoints.append((waypoint_lat, waypoint_long))
+                if position_filter(origin, destination, (waypoint_lat, waypoint_long)):
+                    waypoints.append((waypoint_lat, waypoint_long))
 
-        return waypoints
+        return waypoints, distance
     
     except googlemaps.exceptions.ApiError as e:
         print(origin, destination)
@@ -70,7 +84,7 @@ def get_waypoints(origin, destination) -> tuple[List[Location], float]:
         raise e
 
 
-def possible_detours(waypoints, max_distance=None, increment=1):
+def possible_detours(waypoints, origin, destination, max_distance=None, increment=1):
     detours = set()
     detour_positions = set()
     threads = []
@@ -100,6 +114,8 @@ def possible_detours(waypoints, max_distance=None, increment=1):
         thread.join()
 
     for location in locations:
+        if not position_filter(origin, destination, location.position):
+            continue
         if location.position not in detour_positions:
             detour_positions.add(location.position)
             detours.add(location)
