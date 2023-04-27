@@ -133,10 +133,12 @@ def from_query_result(query_result: any) -> Location:
                     num_ratings=query_result['user_ratings_total'] if 'user_ratings_total' in query_result else 0,
                     )
 
+
 def get_location_by_id(id: str) -> Location | None:
     gmaps = googlemaps.Client(key=api.get_google_api_key())
     query_result = gmaps.place(
-        place_id=id
+        place_id=id,
+        fields=["name", "geometry", "place_id", "type"]
     )
 
     return from_query_result(query_result['result'])
@@ -188,6 +190,23 @@ def get_nearby_places(page_token: str = None, location=TEST_LOCATION, radius=200
         print("API Error!")
         raise e
 
+
+def get_place_reviews(detour: Location) -> Location:
+    gmaps = googlemaps.Client(key=api.get_google_api_key())
+    query_result: dict = gmaps.place(
+        place_id=detour.place_id,
+        fields=["reviews", "editorial_summary"]
+    )
+
+    detour_result = query_result['result']
+    if 'editorial_summary' in detour_result.keys():
+        detour.information.append(detour_result['editorial_summary']['overview'])
+    if 'reviews' in detour_result.keys():
+        detour_reviews = detour_result['reviews']
+        for detour_review in detour_reviews:
+            if detour_review['text']: detour.information.append(detour_review['text'])
+    
+    return detour if detour.information else None
 
 if __name__ == '__main__':
     # print(str(get_location_by_name("Carson Beach")))

@@ -5,7 +5,7 @@ from math import radians, sin, cos, acos
 import numpy as np
 import threading
 import time
-import sqlite3
+# from google.cloud import datastore
 from pprint import pprint
 import csv
 import random
@@ -44,7 +44,7 @@ def position_filter(origin: Position, destination: Position, detour: Position) -
     return (within_lat or within_long)
 
 
-def get_waypoints(origin: str | Position, destination: str | Position, max_distance: float | None = None) -> tuple[List[Position], Position, Position]:
+def get_waypoints(origin: str | Position, destination: str | Position, max_distance: float | None = None) -> tuple[List[Position], Position, Position, float]:
     gmaps = googlemaps.Client(key=api.get_google_api_key())
     
     try: 
@@ -64,8 +64,15 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
         destination_position = query_result[0]['legs'][0]['end_location']
         dlat, dlong = destination_position['lat'], destination_position['lng']
         dest_pos = (dlat, dlong)
-        if max_distance == None: max_distance = 1.2*calculate_distance(origin_pos, dest_pos)
+        if max_distance == None: max_distance = 1.5*calculate_distance(origin_pos, dest_pos)
+
+        # the method below currently does not work for shorter distances, so revert to old method
+        if route_distance < 100000:
+            overview_polyline = query_result[0]['overview_polyline']['points']
+            waypoints = polyline.decode(overview_polyline)
+            return waypoints, origin_pos, dest_pos, float(route_distance)
         
+        # new method of calculating waypoints
         # center/average (a) latitude and longitude
         alat, along = (olat+dlat)/2, (olong+dlong)/2
         route_radius = route_distance/2
@@ -85,7 +92,7 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
                 if calculate_distance(origin_pos, waypoint_pos) + calculate_distance(dest_pos, waypoint_pos) < max_distance:
                     waypoints.append((waypoint_lat, waypoint_long))
 
-        return waypoints, origin_pos, dest_pos
+        return waypoints, origin_pos, dest_pos, float(route_distance)
     
     except googlemaps.exceptions.ApiError as e:
         print(origin, destination)
@@ -129,27 +136,20 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
             detours.add(location)
     
     # print(detours)
-    return detours
+    return list(detours)
 
 
 def get_reviews(detours: List[Location]):
-    gmaps = googlemaps.Client(key=api.get_google_api_key())
+    # gmaps = googlemaps.Client(key=api.get_google_api_key())
     detours_with_reviews = []
     threads = []
     detours_with_reviews = []
 
     def get_reviews_multithread(detour):
-        query_result: dict = gmaps.place(
-                place_id=detour.place_id
-            )
-        detour_results = query_result['result']
-        if 'reviews' in detour_results.keys():
-            detour_reviews = detour_results['reviews']
-            for detour_review in detour_reviews:
-                if detour_review['text']: detour.information.append(detour_review['text'])
-            if detour.information: detours_with_reviews.append(detour)
+        detour_with_review = get_place_reviews(detour)
+        detours_with_reviews.append(detour_with_review)
         
-    for i, detour in enumerate(list(detours)):
+    for i, detour in enumerate(detours):
         threads.append(threading.Thread(
             target=get_reviews_multithread, 
             args=(detour,)
