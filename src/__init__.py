@@ -7,6 +7,7 @@ from dataclasses import dataclass, asdict
 from data_collection import Location
 import data_collection
 import ml
+import time
 
 
 @dataclass
@@ -47,8 +48,9 @@ def get_detours(
     popularity_weight = maybe_popularity_weight if maybe_popularity_weight else 0.1
 
     # get all possible detours
+    start = time.time()
     possible_detours = data_collection.get_locations(origin, destination)
-    print("got all possible detours")
+    print("got all possible detours", time.time() - start)
 
     # get the model evaluation
     def detour_to_info_string(detour: Location) -> str:
@@ -56,7 +58,7 @@ def get_detours(
 
     ml_scores = ml.get_score(keyword,
                              {detour: detour_to_info_string(detour) for detour in possible_detours})
-    print("got ml scores")
+    print("got ml scores", time.time() - start)
 
     # filter only the most relevant
     FILTER_THRESHOLD = 0.55  # kinda arbitrary
@@ -70,6 +72,9 @@ def get_detours(
         normalized_rating = (detour.rating - 1.0) / 4.0
         normalized_num_ratings = 1 - math.exp(-0.01 * detour.num_ratings)
         return 0.5 * normalized_rating + 0.5 * normalized_num_ratings
+
+    def get_distance_score(detour: Location) -> float:
+        pass
 
     def get_total_score(detour: Location) -> float:
         # TODO: Distance calculation
@@ -89,7 +94,7 @@ def get_detours(
 
     detours_info = map(to_detour_info, filtered_detours)
     detours_info = list(sorted(detours_info, key=lambda info: info.total_score, reverse=True))
-    print("returning result")
+    print("returning result", time.time() - start)
 
     return DetourQueryResult(
         results=detours_info[:target_count],

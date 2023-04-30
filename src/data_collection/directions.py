@@ -5,7 +5,7 @@ from math import radians, sin, cos, acos
 import numpy as np
 import threading
 import time
-# from google.cloud import datastore
+# from google.cloud import datastore # FIX THIS
 from pprint import pprint
 import csv
 import random
@@ -32,7 +32,7 @@ def calculate_distance(position1: Position, position2: Position) -> float:
     return EARTH_RADIUS * acos(cos(p1_lat)*cos(p2_lat) + sin(p1_lat)*sin(p2_lat)*cos(radians(p2_long-p1_long)))
 
 
-def position_filter(origin: Position, destination: Position, detour: Position) ->  bool:
+def position_filter(origin: Position, destination: Position, detour: Position) -> bool:
     # returns True if we should keep filter
     olat, olong = origin
     dlat, dlong = destination
@@ -42,6 +42,26 @@ def position_filter(origin: Position, destination: Position, detour: Position) -
     within_long = olong < detour_long < dlong or dlong < detour_long < olong
 
     return (within_lat or within_long)
+
+
+# datastore_client = datastore.Client()
+
+# def store_location(dt):
+#     entity = datastore.Entity(key=datastore_client.key('place_id'))
+#     entity.update({
+#         'timestamp': dt
+#     })
+
+#     datastore_client.put(entity)
+
+
+# def fetch_location(limit):
+#     query = datastore_client.query(kind='visit')
+#     query.order = ['-timestamp']
+
+#     times = query.fetch(limit=limit)
+
+#     return times
 
 
 def get_waypoints(origin: str | Position, destination: str | Position, max_distance: float | None = None) -> tuple[List[Position], Position, Position, float]:
@@ -64,13 +84,14 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
         destination_position = query_result[0]['legs'][0]['end_location']
         dlat, dlong = destination_position['lat'], destination_position['lng']
         dest_pos = (dlat, dlong)
-        if max_distance == None: max_distance = 1.5*calculate_distance(origin_pos, dest_pos)
+        if max_distance == None: max_distance = 1.25*calculate_distance(origin_pos, dest_pos)
 
         # the method below currently does not work for shorter distances, so revert to old method
         if route_distance < 100000:
             overview_polyline = query_result[0]['overview_polyline']['points']
             waypoints = polyline.decode(overview_polyline)
-            return waypoints[::5], origin_pos, dest_pos, float(route_distance)
+            waypoint_increment = len(waypoints) // 50
+            return waypoints[::waypoint_increment], origin_pos, dest_pos, float(route_distance)
         
         # new method of calculating waypoints
         # center/average (a) latitude and longitude
@@ -156,8 +177,10 @@ def get_reviews(detours: List[Location]):
         ))
         threads[i].start()
         # prevents more than 100 requests per second
-        if i+1 % 100 == 0: time.sleep(1)
-        print(f'detour {i} was processed')
+        if i+1 % 100 == 0: 
+            print("going to sleep")
+            time.sleep(1)
+        print(f'{detour.name} was processed')
     
     for thread in threads:
         thread.join()

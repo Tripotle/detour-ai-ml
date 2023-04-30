@@ -136,4 +136,5 @@ websocket-client==1.5.1
 websockets==10.4
 Werkzeug==2.2.3
 widgetsnbextension==4.0.7
+wikipedia-api==0.5.8
 yarl==1.8.2
