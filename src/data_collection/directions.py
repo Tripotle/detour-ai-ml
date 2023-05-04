@@ -1,18 +1,20 @@
 import api
 from data_collection.places import *
 import googlemaps
+from google.cloud import datastore
+import polyline
+import wikipediaapi
 from math import radians, sin, cos, acos
 import numpy as np
 import threading
 import time
-# from google.cloud import datastore # FIX THIS
 from pprint import pprint
 import csv
 import random
-import polyline
 
 # TEST LOCATIONS
 TEST_ORIGIN = '48 Massachusetts Ave w16, Cambridge, MA 02139'
+CLOSE_DESTINATION = '455 Main St, Worcester, MA 01608'
 TEST_DESTINATION = '2010 William J Day Blvd, Boston, MA 02127'
 NY_DESTINATION = 'City Park Hall, New York, NY 10007'
 
@@ -44,18 +46,25 @@ def position_filter(origin: Position, destination: Position, detour: Position) -
     return (within_lat or within_long)
 
 
-# datastore_client = datastore.Client()
-
-# def store_location(dt):
-#     entity = datastore.Entity(key=datastore_client.key('place_id'))
-#     entity.update({
-#         'timestamp': dt
-#     })
-
-#     datastore_client.put(entity)
+def get_wikipedia_review(detour: Location) -> None:
+    wiki = wikipediaapi.Wikipedia('en')
+    page = wiki.page(detour.name)
+    
+    if page.exists() and "may refer to" not in page.summary: 
+        detour.information.append(page.summary)
 
 
-# def fetch_location(limit):
+def store_location(detour: Location) -> None:
+    datastore_client = datastore.Client()
+    entity = datastore.Entity(key=datastore_client.key('place_id'))
+    entity.update({
+        'timestamp': dt
+    })
+
+    datastore_client.put(entity)
+
+
+# def fetch_location(detour: Location) -> None:
 #     query = datastore_client.query(kind='visit')
 #     query.order = ['-timestamp']
 
@@ -87,10 +96,10 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
         if max_distance == None: max_distance = 1.25*calculate_distance(origin_pos, dest_pos)
 
         # the method below currently does not work for shorter distances, so revert to old method
-        if route_distance < 100000:
+        if route_distance < 60000:
             overview_polyline = query_result[0]['overview_polyline']['points']
             waypoints = polyline.decode(overview_polyline)
-            waypoint_increment = len(waypoints) // 50
+            waypoint_increment = len(waypoints) // 50 if len(waypoints) > 50 else 1
             return waypoints[::waypoint_increment], origin_pos, dest_pos, float(route_distance)
         
         # new method of calculating waypoints
@@ -144,7 +153,8 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
         threads[i].start()
         # prevents more than 100 requests per second
         if i+1 % 100 == 0: time.sleep(1)
-        print(f'waypoint {i} was processed')
+    
+    print(f'all {len(waypoints)} waypoints were processed')
     
     for thread in threads:
         thread.join()
@@ -161,13 +171,13 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
 
 
 def get_reviews(detours: List[Location]):
-    # gmaps = googlemaps.Client(key=api.get_google_api_key())
     detours_with_reviews = []
     threads = []
     detours_with_reviews = []
 
     def get_reviews_multithread(detour):
         detour_with_review = get_place_reviews(detour)
+        detour_with_review = get_wikipedia_review(detour)
         if detour_with_review: detours_with_reviews.append(detour_with_review)
         
     for i, detour in enumerate(detours):
@@ -180,11 +190,17 @@ def get_reviews(detours: List[Location]):
         if i+1 % 100 == 0: 
             print("going to sleep")
             time.sleep(1)
-        print(f'{detour.name} was processed')
+    
+    print(f'all {len(detours)} detours were processed')
     
     for thread in threads:
         thread.join()
     
+    # start = time.time()
+    # for detour in detours:
+    #     detour_with_review = get_wikipedia_review(detour)
+    # print(time.time() - start)
+
     return detours_with_reviews
 
 
@@ -214,12 +230,12 @@ if __name__ == '__main__':
     #         if detour_review['text']: test.append(detour_review['text'])
     # print(test)
 
-    detours = get_detours(TEST_ORIGIN, TEST_DESTINATION, 1)
-    for detour_index, detour in enumerate(detours):
-        print(detour_index)
-        pprint(str(detour), width=1000)
-        print(detour.information)
-        pprint(detour.get_gmaps_link())
+    detours = get_detours(TEST_ORIGIN, CLOSE_DESTINATION, 1)
+    # for detour_index, detour in enumerate(detours):
+    #     print(detour_index)
+    #     pprint(str(detour), width=1000)
+    #     print(detour.information)
+    #     pprint(detour.get_gmaps_link())
 
     # with open('out/test_plot.csv', 'w', encoding='utf-8') as f:
     #     writer = csv.writer(f)

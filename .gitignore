@@ -1,6 +1,7 @@
 # Stores private info
 **/.env
 **/.flaskenv
+plated-mantra-385005-600b3ef4283f.json
 
 # Alex's IDE files
 .idea/
