@@ -136,18 +136,37 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
             types=['tourist_attraction']
         )
 
-    for i, waypoint in enumerate(waypoints[::increment]):
-        threads.append(threading.Thread(
-            target=get_nearby_places_multithread, 
-            args=(waypoint, locations)
-        ))
-        threads[i].start()
-        # prevents more than 100 requests per second
-        if i+1 % 100 == 0: time.sleep(1)
-        print(f'waypoint {i} was processed')
+    MAX_REQUESTS_PER_SECOND = 90
+    for i in range(0, len(waypoints), MAX_REQUESTS_PER_SECOND):
+        for j in range(min(MAX_REQUESTS_PER_SECOND, len(waypoints) - i)):
+            thread = threading.Thread(
+                target=get_nearby_places_multithread, 
+                args=(waypoints[i+j], locations)
+            )
+            thread.start()
+            threads.append(thread)
+        for thread in threads:
+            thread.join()
+        # print(f'going to sleep for threads {i}')
+        time.sleep(1)
+        # print('awoke')
+        threads.clear()
+
     
-    for thread in threads:
-        thread.join()
+    # for i, waypoint in enumerate(waypoints[::increment]):
+    #     threads.append(threading.Thread(
+    #         target=get_nearby_places_multithread, 
+    #         args=(waypoint, locations)
+    #     ))
+    #     threads[i].start()
+    #     # prevents more than 100 requests per second
+    #     if (i+1) % 100 == 0: 
+    #         # print("this happens")
+    #         time.sleep(1)
+    #     # print(f'waypoint {i} was processed')
+    
+    # for thread in threads:
+    #     thread.join()
 
     for location in locations:
         if not position_filter(origin, destination, location.position):
@@ -170,20 +189,41 @@ def get_reviews(detours: List[Location]):
         detour_with_review = get_place_reviews(detour)
         if detour_with_review: detours_with_reviews.append(detour_with_review)
         
-    for i, detour in enumerate(detours):
-        threads.append(threading.Thread(
-            target=get_reviews_multithread, 
-            args=(detour,)
-        ))
-        threads[i].start()
-        # prevents more than 100 requests per second
-        if i+1 % 100 == 0: 
-            print("going to sleep")
-            time.sleep(1)
-        print(f'{detour.name} was processed')
+    MAX_REQUESTS_PER_SECOND = 90
+    for i in range(0, len(detours), MAX_REQUESTS_PER_SECOND):
+        for j in range(min(MAX_REQUESTS_PER_SECOND, len(detours) - i)):
+            thread = threading.Thread(
+                target=get_reviews_multithread, 
+                args=(detours[i+j],)
+            )
+            thread.start()
+            threads.append(thread)
+        for thread in threads:
+            thread.join()
+        # print(f'going to sleep for threads {i}')
+        time.sleep(1)
+        # print('awoke')
+        threads.clear()
     
-    for thread in threads:
-        thread.join()
+    # def do_nothing(detour):
+    #     pass
+    # for i, detour in enumerate(detours):
+    #     threads.append(threading.Thread(
+    #         target=do_nothing, 
+    #         args=(detour,)
+    #     ))
+    #     threads[i].start()
+    #     # prevents more than 100 requests per second
+    #     # print(i)
+    #     # print((i+1) % 10 == 0)
+    #     # print(i+1 % 10 == 0)
+    #     if (i+1) % 100 == 0: 
+    #         print("going to sleep")
+    #         time.sleep(1)
+    #     print(f'{detour.name} was processed')
+    
+    # for thread in threads:
+    #     thread.join()
     
     return detours_with_reviews
 

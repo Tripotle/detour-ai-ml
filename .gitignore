@@ -1,6 +1,7 @@
 # Stores private info
 **/.env
 **/.flaskenv
+/plated*
 
 # Alex's IDE files
 .idea/
