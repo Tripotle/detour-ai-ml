@@ -25,6 +25,11 @@ DEG_LONG_TO_M = 111320
 MAX_SEARCH_RADIUS = 35355 # 50000/sqrt(2)
 EARTH_RADIUS = 6371000
 
+
+# API LIMIT
+MAX_REQUESTS_PER_SECOND = 90
+
+
 def calculate_distance(position1: Position, position2: Position) -> float:
     p1_lat, p1_long = position1
     p2_lat, p2_long = position2
@@ -145,6 +150,21 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
             types=['tourist_attraction']
         )
 
+    # for i in range(0, len(waypoints), MAX_REQUESTS_PER_SECOND):
+    #     for j in range(min(MAX_REQUESTS_PER_SECOND, len(waypoints) - i)):
+    #         thread = threading.Thread(
+    #             target=get_nearby_places_multithread, 
+    #             args=(waypoints[i+j], locations)
+    #         )
+    #         thread.start()
+    #         threads.append(thread)
+    #     for thread in threads:
+    #         thread.join()
+    #     # print(f'going to sleep for threads {i}')
+    #     time.sleep(1)
+    #     # print('awoke')
+    #     threads.clear()
+
     for i, waypoint in enumerate(waypoints[::increment]):
         threads.append(threading.Thread(
             target=get_nearby_places_multithread, 
@@ -152,9 +172,10 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
         ))
         threads[i].start()
         # prevents more than 100 requests per second
-        if i+1 % 100 == 0: time.sleep(1)
-    
-    print(f'all {len(waypoints)} waypoints were processed')
+        if (i+1) % MAX_REQUESTS_PER_SECOND == 0: 
+            print("this happens")
+            time.sleep(1)
+        # print(f'waypoint {i} was processed')
     
     for thread in threads:
         thread.join()
@@ -180,18 +201,35 @@ def get_reviews(detours: List[Location]):
         detour_with_review = get_wikipedia_review(detour)
         if detour_with_review: detours_with_reviews.append(detour_with_review)
         
+    # MAX_REQUESTS_PER_SECOND = 90
+    # for i in range(0, len(detours), MAX_REQUESTS_PER_SECOND):
+    #     for j in range(min(MAX_REQUESTS_PER_SECOND, len(detours) - i)):
+    #         thread = threading.Thread(
+    #             target=get_reviews_multithread, 
+    #             args=(detours[i+j],)
+    #         )
+    #         thread.start()
+    #         threads.append(thread)
+    #     for thread in threads:
+    #         thread.join()
+    #     # print(f'going to sleep for threads {i}')
+    #     time.sleep(1)
+    #     # print('awoke')
+    #     threads.clear()
+    
+    def do_nothing(detour):
+        pass
+
     for i, detour in enumerate(detours):
         threads.append(threading.Thread(
-            target=get_reviews_multithread, 
+            target=do_nothing, 
             args=(detour,)
         ))
         threads[i].start()
-        # prevents more than 100 requests per second
-        if i+1 % 100 == 0: 
+        if (i+1) % MAX_REQUESTS_PER_SECOND == 0: 
             print("going to sleep")
             time.sleep(1)
-    
-    print(f'all {len(detours)} detours were processed')
+        # print(f'{detour.name} was processed')
     
     for thread in threads:
         thread.join()
@@ -212,7 +250,7 @@ def get_detours(origin: str | Position, destination: str | Position, increment=1
     return list(detours_with_reviews)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # print("Success!")
     # gmaps = googlemaps.Client(key=api.get_api_key())
     # place = gmaps.find_place(

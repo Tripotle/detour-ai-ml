@@ -185,9 +185,9 @@ def get_nearby_places(page_token: str = None, location=TEST_LOCATION, radius=200
         
         return result
     except googlemaps.exceptions.ApiError as e:
-        print(page_token, location, radius, types)
+        # print(page_token, location, radius, types)
         # try the same query in case page_token is just bad?
-        print("API Error!")
+        # print("API Error!")
         raise e
 
 
