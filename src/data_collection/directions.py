@@ -52,30 +52,38 @@ def position_filter(origin: Position, destination: Position, detour: Position) -
     return (within_lat or within_long)
 
 
-def get_wikipedia_review(detour: Location) -> Location:
+def get_wikipedia_review(detour: Location) -> Location | None:
+    # this might be buggy...test with longer routes!
     wiki = wikipediaapi.Wikipedia('en')
     page = wiki.page(detour.name)
     
     if page.exists() and "may refer to" not in page.summary: 
         detour.information.append(page.summary)
     
-    return detour
+    return detour if detour.information else None
 
+
+db = firestore.Client(project='plated-mantra-385005')
 
 def store_location(detour: Location) -> None:
-    db = firestore.Client(project='plated-mantra-385005')
     doc_ref = db.collection(u'detours').document(detour.place_id)
     doc_ref.set({
-        'information': detour.information
+        'place_id': detour.place_id,
+        'information': detour.information,
     })
-    print("this happens?")
+    print("stored location successfully i hope")
 
+def fetch_location(detour: Location) -> Location | None:
+    # db = firestore.Client(project='plated-mantra-385005')
+    doc_ref = db.collection(u'detours').document(detour.place_id)
+    doc = doc_ref.get()
+    
+    if doc.exists:
+        detour_info = doc.to_dict()
+        print(detour_info)
+    else:
+        return None
 
-def fetch_location(detour: Location) -> Location:
-    db = firestore.Client(project='plated-mantra-385005')
-    docs = db.collection(u'detours').where(u'place_id', u'==', detour.place_id)
-    for doc in docs:
-        print(doc.to_dict())
 
 
 def get_waypoints(origin: str | Position, destination: str | Position, max_distance: float | None = None) -> tuple[List[Position], Position, Position, float]:
@@ -150,21 +158,6 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
             types=['tourist_attraction']
         )
 
-    # for i in range(0, len(waypoints), MAX_REQUESTS_PER_SECOND):
-    #     for j in range(min(MAX_REQUESTS_PER_SECOND, len(waypoints) - i)):
-    #         thread = threading.Thread(
-    #             target=get_nearby_places_multithread, 
-    #             args=(waypoints[i+j], locations)
-    #         )
-    #         thread.start()
-    #         threads.append(thread)
-    #     for thread in threads:
-    #         thread.join()
-    #     # print(f'going to sleep for threads {i}')
-    #     time.sleep(1)
-    #     # print('awoke')
-    #     threads.clear()
-
     for i, waypoint in enumerate(waypoints[::increment]):
         threads.append(threading.Thread(
             target=get_nearby_places_multithread, 
@@ -173,9 +166,8 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
         threads[i].start()
         # prevents more than 100 requests per second
         if (i+1) % MAX_REQUESTS_PER_SECOND == 0: 
-            print("this happens")
+            print("slept on waypoint call")
             time.sleep(1)
-        # print(f'waypoint {i} was processed')
     
     for thread in threads:
         thread.join()
@@ -197,48 +189,25 @@ def get_reviews(detours: List[Location]):
     detours_with_reviews = []
 
     def get_reviews_multithread(detour):
-        detour_with_review = get_place_reviews(detour)
+        # detour_with_review = get_place_reviews(detour)
         detour_with_review = get_wikipedia_review(detour)
         if detour_with_review: detours_with_reviews.append(detour_with_review)
-        
-    # MAX_REQUESTS_PER_SECOND = 90
-    # for i in range(0, len(detours), MAX_REQUESTS_PER_SECOND):
-    #     for j in range(min(MAX_REQUESTS_PER_SECOND, len(detours) - i)):
-    #         thread = threading.Thread(
-    #             target=get_reviews_multithread, 
-    #             args=(detours[i+j],)
-    #         )
-    #         thread.start()
-    #         threads.append(thread)
-    #     for thread in threads:
-    #         thread.join()
-    #     # print(f'going to sleep for threads {i}')
-    #     time.sleep(1)
-    #     # print('awoke')
-    #     threads.clear()
     
     def do_nothing(detour):
         pass
 
     for i, detour in enumerate(detours):
         threads.append(threading.Thread(
-            target=do_nothing, 
+            target=get_reviews_multithread, 
             args=(detour,)
         ))
         threads[i].start()
         if (i+1) % MAX_REQUESTS_PER_SECOND == 0: 
-            print("going to sleep")
+            print("slept on review call")
             time.sleep(1)
-        print(detour.name)
-        # print(f'{detour.name} was processed')
     
     for thread in threads:
         thread.join()
-    
-    # start = time.time()
-    # for detour in detours:
-    #     detour_with_review = get_wikipedia_review(detour)
-    # print(time.time() - start)
 
     return detours_with_reviews
 
@@ -252,52 +221,6 @@ def get_detours(origin: str | Position, destination: str | Position, increment=1
 
 
 if __name__ == "__main__":
-    # print("Success!")
-    # gmaps = googlemaps.Client(key=api.get_api_key())
-    # place = gmaps.find_place(
-    #     input='Samuel H. Young Park',
-    #     input_type='textquery',
-    # )
-    # place = gmaps.place(
-    #             place_id=place['candidates'][0]['place_id'] #'ChIJ4bwEPIBw44kRs7STmn977tE'
-    #         )
-    # place_results = place['result']
-    # test = []
-    # if 'reviews' in place_results.keys():
-    #     detour_reviews = place_results['reviews']
-    #     for detour_review in detour_reviews:
-    #         if detour_review['text']: test.append(detour_review['text'])
-    # print(test)
-
     detours = get_detours(TEST_ORIGIN, TEST_DESTINATION, 1)
     for detour in detours:
-        store_location(detour)
-    # for detour in detours:
-        # fetch_location(detour)
-    # for detour_index, detour in enumerate(detours):
-    #     print(detour_index)
-    #     pprint(str(detour), width=1000)
-    #     print(detour.information)
-    #     pprint(detour.get_gmaps_link())
-
-    # with open('out/test_plot.csv', 'w', encoding='utf-8') as f:
-    #     writer = csv.writer(f)
-    #     writer.writerow(['name', 'lat', 'long'])
-        
-    #     for place_index, place in enumerate(detours):
-    #         place_lat, place_long = place.position
-    #         place_name = place.name
-    #         writer.writerow([place_name, place_lat, place_long])
-    
-    # with open('out/test_plot.csv', newline='\n', encoding='utf-8') as csvfile:
-    #     random_detours = csv.reader(csvfile)
-    #     row_list = []
-    #     for row in random_detours:
-    #         row_list.append(row)
-    #     random_detours = random.choices(row_list, k=30)
-    
-    # with open('out/test_plot.csv', 'w+', encoding='utf-8') as f:
-    #     writer = csv.writer(f)
-    #     writer.writerow(['name', 'lat', 'long'])
-    #     for row in random_detours:
-    #         writer.writerow(row)
+        fetch_location(detour)
