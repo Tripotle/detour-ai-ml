@@ -71,7 +71,7 @@ def store_location(detour: Location) -> None:
         'place_id': detour.place_id,
         'information': detour.information,
     })
-    print("stored location successfully i hope")
+    print(f"store-location was called for {detour.name}")
 
 def fetch_location(detour: Location) -> Location | None:
     # db = firestore.Client(project='plated-mantra-385005')
@@ -79,9 +79,12 @@ def fetch_location(detour: Location) -> Location | None:
     doc = doc_ref.get()
     
     if doc.exists:
-        detour_info = doc.to_dict()
-        print(detour_info)
+        detour_doc = doc.to_dict()
+        detour.information += detour_doc['information']
+        print(f"location was successfully fetched for {detour.name}")
+        return detour
     else:
+        print(f"doc was not found for {detour.name}")
         return None
 
 
@@ -189,9 +192,15 @@ def get_reviews(detours: List[Location]):
     detours_with_reviews = []
 
     def get_reviews_multithread(detour):
-        # detour_with_review = get_place_reviews(detour)
-        detour_with_review = get_wikipedia_review(detour)
-        if detour_with_review: detours_with_reviews.append(detour_with_review)
+        detour_with_review = fetch_location(detour)
+        if detour_with_review: # location in database
+            detours_with_reviews.append(detour_with_review)
+        else:
+            detour_with_review = get_place_reviews(detour)
+            detour_with_review = get_wikipedia_review(detour)
+            if detour_with_review: 
+                store_location(detour_with_review)
+                detours_with_reviews.append(detour_with_review)
     
     def do_nothing(detour):
         pass
@@ -215,12 +224,15 @@ def get_reviews(detours: List[Location]):
 def get_detours(origin: str | Position, destination: str | Position, increment=1):
     waypoints, origin_pos, dest_pos, route_distance = get_waypoints(origin=origin, destination=destination)
     detours = possible_detours(waypoints=waypoints, origin=origin_pos, destination=dest_pos, increment=increment)
+    
+    start = time.time()
     detours_with_reviews = get_reviews(detours)
+    print(time.time() - start)
     
     return list(detours_with_reviews)
 
 
 if __name__ == "__main__":
-    detours = get_detours(TEST_ORIGIN, TEST_DESTINATION, 1)
-    for detour in detours:
-        fetch_location(detour)
+    detours = get_detours(TEST_ORIGIN, NY_DESTINATION, 1)
+    # for detour in detours:
+    #     fetch_location(detour)
