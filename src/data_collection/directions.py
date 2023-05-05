@@ -1,7 +1,7 @@
 import api
 from data_collection.places import *
 import googlemaps
-from google.cloud import datastore
+from google.cloud import firestore
 import polyline
 import wikipediaapi
 from math import radians, sin, cos, acos
@@ -11,6 +11,7 @@ import time
 from pprint import pprint
 import csv
 import random
+import os
 
 # TEST LOCATIONS
 TEST_ORIGIN = '48 Massachusetts Ave w16, Cambridge, MA 02139'
@@ -51,31 +52,30 @@ def position_filter(origin: Position, destination: Position, detour: Position) -
     return (within_lat or within_long)
 
 
-def get_wikipedia_review(detour: Location) -> None:
+def get_wikipedia_review(detour: Location) -> Location:
     wiki = wikipediaapi.Wikipedia('en')
     page = wiki.page(detour.name)
     
     if page.exists() and "may refer to" not in page.summary: 
         detour.information.append(page.summary)
+    
+    return detour
 
 
 def store_location(detour: Location) -> None:
-    datastore_client = datastore.Client()
-    entity = datastore.Entity(key=datastore_client.key('place_id'))
-    entity.update({
-        'timestamp': dt
+    db = firestore.Client(project='plated-mantra-385005')
+    doc_ref = db.collection(u'detours').document(detour.place_id)
+    doc_ref.set({
+        'information': detour.information
     })
+    print("this happens?")
 
-    datastore_client.put(entity)
 
-
-# def fetch_location(detour: Location) -> None:
-#     query = datastore_client.query(kind='visit')
-#     query.order = ['-timestamp']
-
-#     times = query.fetch(limit=limit)
-
-#     return times
+def fetch_location(detour: Location) -> Location:
+    db = firestore.Client(project='plated-mantra-385005')
+    docs = db.collection(u'detours').where(u'place_id', u'==', detour.place_id)
+    for doc in docs:
+        print(doc.to_dict())
 
 
 def get_waypoints(origin: str | Position, destination: str | Position, max_distance: float | None = None) -> tuple[List[Position], Position, Position, float]:
@@ -229,6 +229,7 @@ def get_reviews(detours: List[Location]):
         if (i+1) % MAX_REQUESTS_PER_SECOND == 0: 
             print("going to sleep")
             time.sleep(1)
+        print(detour.name)
         # print(f'{detour.name} was processed')
     
     for thread in threads:
@@ -268,7 +269,11 @@ if __name__ == "__main__":
     #         if detour_review['text']: test.append(detour_review['text'])
     # print(test)
 
-    detours = get_detours(TEST_ORIGIN, CLOSE_DESTINATION, 1)
+    detours = get_detours(TEST_ORIGIN, TEST_DESTINATION, 1)
+    for detour in detours:
+        store_location(detour)
+    # for detour in detours:
+        # fetch_location(detour)
     # for detour_index, detour in enumerate(detours):
     #     print(detour_index)
     #     pprint(str(detour), width=1000)
