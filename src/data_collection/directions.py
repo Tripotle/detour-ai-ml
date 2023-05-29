@@ -140,7 +140,7 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
                 if calculate_distance(origin_pos, waypoint_pos) + calculate_distance(dest_pos, waypoint_pos) < max_distance:
                     waypoints.append((waypoint_lat, waypoint_long))
 
-        return waypoints, origin_pos, dest_pos, float(route_distance)
+        return waypoints, origin_pos, dest_pos, float(geodesic_distance)
     
     except googlemaps.exceptions.ApiError as e:
         print(origin, destination)
@@ -223,13 +223,16 @@ def get_reviews(detours: List[Location]):
     return detours_with_reviews
 
 
-def get_detours(origin: str | Position, destination: str | Position, increment=1):
-    waypoints, origin_pos, dest_pos, route_distance = get_waypoints(origin=origin, destination=destination)
+def get_detours(origin: str | Position, destination: str | Position, increment=1) -> List[Location]:
+    waypoints, origin_pos, dest_pos, geodesic_distance = get_waypoints(origin=origin, destination=destination)
     detours = possible_detours(waypoints=waypoints, origin=origin_pos, destination=dest_pos, increment=increment)
     
     start = time.time()
     detours_with_reviews = get_reviews(detours)
     print(time.time() - start, "seconds to obtain reviews")
+
+    for detour in detours_with_reviews: # for distance weighting (although this probably only works on contiguous land)
+        detour.distance_from_route = (calculate_distance(origin_pos, detour.position) + calculate_distance(detour.position, dest_pos))/geodesic_distance
     
     return list(detours_with_reviews)
 
