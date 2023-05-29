@@ -9,6 +9,7 @@ import os
 from src import get_detours, api
 
 from flask import Flask, request, Response
+from flask_cors import CORS
 
 
 def create_app() -> Flask:
@@ -71,5 +72,7 @@ def create_app() -> Flask:
                 return Response("sums of weights must be positive", status=400)
 
         return get_detours(keyword, origin, destination, target_count, model_weight, distance_weight, popularity_weight).to_dict()
+
+    CORS(app)
 
     return app

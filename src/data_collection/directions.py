@@ -162,7 +162,7 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
             # exclude_types=[],
             types=['tourist_attraction']
         )
-
+        
     for i, waypoint in enumerate(waypoints[::increment]):
         threads.append(threading.Thread(
             target=get_nearby_places_multithread, 
