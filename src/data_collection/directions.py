@@ -232,7 +232,7 @@ def get_detours(origin: str | Position, destination: str | Position, increment=1
     print(time.time() - start, "seconds to obtain reviews")
 
     for detour in detours_with_reviews: # for distance weighting (although this probably only works on contiguous land)
-        detour.distance_from_route = (calculate_distance(origin_pos, detour.position) + calculate_distance(detour.position, dest_pos))/geodesic_distance
+        detour.distance_from_route = geodesic_distance/(calculate_distance(origin_pos, detour.position) + calculate_distance(detour.position, dest_pos))
     
     return list(detours_with_reviews)
 
