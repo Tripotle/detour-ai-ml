@@ -71,7 +71,8 @@ def store_location(detour: Location) -> None:
         'place_id': detour.place_id,
         'information': detour.information,
     })
-    print(f"store-location was called for {detour.name}")
+    # print(f"store-location was called for {detour.name}")
+
 
 def fetch_location(detour: Location) -> Location | None:
     # db = firestore.Client(project='plated-mantra-385005')
@@ -81,10 +82,10 @@ def fetch_location(detour: Location) -> Location | None:
     if doc.exists:
         detour_doc = doc.to_dict()
         detour.information += detour_doc['information']
-        print(f"location was successfully fetched for {detour.name}")
+        # print(f"location was successfully fetched for {detour.name}")
         return detour
     else:
-        print(f"doc was not found for {detour.name}")
+        # print(f"doc was not found for {detour.name}")
         return None
 
 
@@ -98,10 +99,6 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
             destination=destination,
         )
         
-        # overview_polyline = query_result[0]['overview_polyline']['points']
-        # waypoints = polyline.decode(overview_polyline)
-        route_distance = query_result[0]['legs'][0]['distance']['value']
-        
         # origin (o) and destination (d) positions
         origin_position = query_result[0]['legs'][0]['start_location']
         olat, olong = origin_position['lat'], origin_position['lng']
@@ -109,14 +106,19 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
         destination_position = query_result[0]['legs'][0]['end_location']
         dlat, dlong = destination_position['lat'], destination_position['lng']
         dest_pos = (dlat, dlong)
-        if max_distance == None: max_distance = 1.25*calculate_distance(origin_pos, dest_pos)
+
+        # overview_polyline = query_result[0]['overview_polyline']['points']
+        # waypoints = polyline.decode(overview_polyline)
+        route_distance = query_result[0]['legs'][0]['distance']['value']
+        geodesic_distance = calculate_distance(origin_pos, dest_pos)
+        if max_distance == None: max_distance = 1.2*geodesic_distance # 1.2 is quite arbitrary, could change to user input later
 
         # the method below currently does not work for shorter distances, so revert to old method
-        if route_distance < 60000:
-            overview_polyline = query_result[0]['overview_polyline']['points']
-            waypoints = polyline.decode(overview_polyline)
-            waypoint_increment = len(waypoints) // 50 if len(waypoints) > 50 else 1
-            return waypoints[::waypoint_increment], origin_pos, dest_pos, float(route_distance)
+        # if route_distance < 60000:
+        #     overview_polyline = query_result[0]['overview_polyline']['points']
+        #     waypoints = polyline.decode(overview_polyline)
+        #     waypoint_increment = len(waypoints) // 50 if len(waypoints) > 50 else 1
+        #     return waypoints[::waypoint_increment], origin_pos, dest_pos, float(route_distance)
         
         # new method of calculating waypoints
         # center/average (a) latitude and longitude
@@ -130,9 +132,9 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
         sb_minlong, sb_maxlong = along-long_diff, along+long_diff
 
         waypoints = []
-        for waypoint_lat in np.arange(sb_minlat, sb_maxlat, MAX_SEARCH_RADIUS/DEG_LAT_TO_M):
+        for waypoint_lat in np.arange(sb_minlat, sb_maxlat, min(lat_diff/3, MAX_SEARCH_RADIUS/DEG_LAT_TO_M)): # up to 2*3 = 6 points in grid latitude-wise
             deg_long_to_m = DEG_LONG_TO_M*cos(radians(waypoint_lat))
-            for waypoint_long in np.arange(sb_minlong, sb_maxlong, MAX_SEARCH_RADIUS/deg_long_to_m):
+            for waypoint_long in np.arange(sb_minlong, sb_maxlong, min(long_diff/3, MAX_SEARCH_RADIUS/deg_long_to_m)): #  up to 2*3 = 6 points in grid longitude-wise
                 waypoint_pos = (waypoint_lat, waypoint_long)
                 if not position_filter(origin_pos, dest_pos, waypoint_pos): continue
                 if calculate_distance(origin_pos, waypoint_pos) + calculate_distance(dest_pos, waypoint_pos) < max_distance:
@@ -156,8 +158,8 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
         locations += get_nearby_places(
             page_token="",
             location=waypoint,
-            radius=50000,
-            exclude_types=[],
+            # radius=50000,
+            # exclude_types=[],
             types=['tourist_attraction']
         )
 
@@ -203,7 +205,7 @@ def get_reviews(detours: List[Location]):
                 detours_with_reviews.append(detour_with_review)
     
     def do_nothing(detour):
-        pass
+        pass # testing multithreading
 
     for i, detour in enumerate(detours):
         threads.append(threading.Thread(
@@ -227,12 +229,12 @@ def get_detours(origin: str | Position, destination: str | Position, increment=1
     
     start = time.time()
     detours_with_reviews = get_reviews(detours)
-    print(time.time() - start)
+    print(time.time() - start, "seconds to obtain reviews")
     
     return list(detours_with_reviews)
 
 
 if __name__ == "__main__":
-    detours = get_detours(TEST_ORIGIN, NY_DESTINATION, 1)
+    detours = get_detours(TEST_ORIGIN, CLOSE_DESTINATION, 1)
     # for detour in detours:
     #     fetch_location(detour)

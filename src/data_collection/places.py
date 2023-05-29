@@ -155,11 +155,10 @@ def get_location_by_name(name: str) -> Location | None:
     return from_query_result(query_result['results'][0])
 
 
-def get_nearby_places(page_token: str = None, location=TEST_LOCATION, radius=200, types=None, exclude_types=None) -> list[Location]:
-    if types is None:
-        types = PLACE_TYPES
-    if exclude_types is None:
-        exclude_types = EXCLUDE_PLACE_TYPES
+def get_nearby_places(page_token: str=None, location: Position=TEST_LOCATION, radius: int=50000, types: any=None, exclude_types: any=[]) -> list[Location]:
+    if types is None: types = PLACE_TYPES
+    if exclude_types is None: exclude_types = EXCLUDE_PLACE_TYPES
+    
     gmaps = googlemaps.Client(key=api.get_google_api_key())
 
     try:
@@ -179,11 +178,12 @@ def get_nearby_places(page_token: str = None, location=TEST_LOCATION, radius=200
                     should_append = False
                     break
             if parsed_place.rating < 4 or parsed_place.num_ratings < 100:
-                should_append = False
+                continue # should_append = False
             if should_append:
                 result.append(parsed_place)
         
         return result
+    
     except googlemaps.exceptions.ApiError as e:
         # print(page_token, location, radius, types)
         # try the same query in case page_token is just bad?
@@ -193,6 +193,7 @@ def get_nearby_places(page_token: str = None, location=TEST_LOCATION, radius=200
 
 def get_place_reviews(detour: Location) -> Location:
     gmaps = googlemaps.Client(key=api.get_google_api_key())
+    
     query_result: dict = gmaps.place(
         place_id=detour.place_id,
         fields=["reviews", "editorial_summary"]

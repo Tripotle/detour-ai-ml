@@ -5,10 +5,8 @@ import dotenv
 # Load environment variables
 dotenv.load_dotenv()
 
-
 def get_google_api_key() -> str:
     return os.getenv('GOOGLE_MAPS_API_KEY')
-
 
 def get_openapi_api_key() -> str:
     """

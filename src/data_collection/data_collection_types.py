@@ -15,6 +15,7 @@ class Location:
         self.rating = rating
         self.num_ratings = num_ratings
         self.information = []
+        self.distance_from_route = None
 
     def get_gmaps_link(self) -> str:
         return f'https://www.google.com/maps/search/?api=1' \
