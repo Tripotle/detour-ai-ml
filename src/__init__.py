@@ -74,13 +74,14 @@ def get_detours(
         return 0.5 * normalized_rating + 0.5 * normalized_num_ratings
 
     def get_distance_score(detour: Location) -> float:
-        pass
+        return detour.distance_from_route
+        # poorly named, this is geodesic distance including the detour over original geodesic distance
 
     def get_total_score(detour: Location) -> float:
         # TODO: Distance calculation
         return (
                 model_weight * ml_scores[detour] +
-                distance_weight * 1 +
+                distance_weight * get_distance_score(detour) +
                 popularity_weight * get_popularity_score(detour)
         ) / total_weight
 
@@ -107,5 +108,5 @@ if __name__ == '__main__':
     # from pprint import pprint
 
     TEST_ORIGIN = 'ChIJh2oa9apw44kRPCAIs6WO4NA'  # MIT
-    TEST_DESTINATION = 'ChIJLw8wo4Vw44kRWkWR0c03LH4'  # Boston City Hall
+    TEST_DESTINATION = 'ChIJDYsqWlgG5IkRbU3Kf9h9E54'  # Worcester
     print(json.dumps(get_detours(keyword="natural", origin=TEST_ORIGIN, destination=TEST_DESTINATION).to_dict()))

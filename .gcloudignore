@@ -1,6 +1,9 @@
 data/
 experiments/
+out/
 src/gui.py
 README.md
 **/.gitignore
 .git
+.venv/
+plated-mantra-385005-600b3ef4283f.json

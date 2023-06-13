@@ -1,18 +1,21 @@
 import api
 from data_collection.places import *
 import googlemaps
+from google.cloud import firestore
+import polyline
+import wikipediaapi
 from math import radians, sin, cos, acos
 import numpy as np
 import threading
 import time
-# from google.cloud import datastore # FIX THIS
 from pprint import pprint
 import csv
 import random
-import polyline
+import os
 
 # TEST LOCATIONS
 TEST_ORIGIN = '48 Massachusetts Ave w16, Cambridge, MA 02139'
+CLOSE_DESTINATION = '455 Main St, Worcester, MA 01608'
 TEST_DESTINATION = '2010 William J Day Blvd, Boston, MA 02127'
 NY_DESTINATION = 'City Park Hall, New York, NY 10007'
 
@@ -22,6 +25,11 @@ DEG_LAT_TO_M = 110574
 DEG_LONG_TO_M = 111320
 MAX_SEARCH_RADIUS = 35355 # 50000/sqrt(2)
 EARTH_RADIUS = 6371000
+
+
+# API LIMIT
+MAX_REQUESTS_PER_SECOND = 90
+
 
 def calculate_distance(position1: Position, position2: Position) -> float:
     p1_lat, p1_long = position1
@@ -44,24 +52,42 @@ def position_filter(origin: Position, destination: Position, detour: Position) -
     return (within_lat or within_long)
 
 
-# datastore_client = datastore.Client()
+def get_wikipedia_review(detour: Location) -> Location | None:
+    # this might be buggy...test with longer routes!
+    wiki = wikipediaapi.Wikipedia('en')
+    page = wiki.page(detour.name)
+    
+    if page.exists() and "may refer to" not in page.summary: 
+        detour.information.append(page.summary)
+    
+    return detour if detour.information else None
 
-# def store_location(dt):
-#     entity = datastore.Entity(key=datastore_client.key('place_id'))
-#     entity.update({
-#         'timestamp': dt
-#     })
 
-#     datastore_client.put(entity)
+db = firestore.Client(project='plated-mantra-385005')
+
+def store_location(detour: Location) -> None:
+    doc_ref = db.collection(u'detours').document(detour.place_id)
+    doc_ref.set({
+        'place_id': detour.place_id,
+        'information': detour.information,
+    })
+    # print(f"store-location was called for {detour.name}")
 
 
-# def fetch_location(limit):
-#     query = datastore_client.query(kind='visit')
-#     query.order = ['-timestamp']
+def fetch_location(detour: Location) -> Location | None:
+    # db = firestore.Client(project='plated-mantra-385005')
+    doc_ref = db.collection(u'detours').document(detour.place_id)
+    doc = doc_ref.get()
+    
+    if doc.exists:
+        detour_doc = doc.to_dict()
+        detour.information += detour_doc['information']
+        # print(f"location was successfully fetched for {detour.name}")
+        return detour
+    else:
+        # print(f"doc was not found for {detour.name}")
+        return None
 
-#     times = query.fetch(limit=limit)
-
-#     return times
 
 
 def get_waypoints(origin: str | Position, destination: str | Position, max_distance: float | None = None) -> tuple[List[Position], Position, Position, float]:
@@ -73,10 +99,6 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
             destination=destination,
         )
         
-        # overview_polyline = query_result[0]['overview_polyline']['points']
-        # waypoints = polyline.decode(overview_polyline)
-        route_distance = query_result[0]['legs'][0]['distance']['value']
-        
         # origin (o) and destination (d) positions
         origin_position = query_result[0]['legs'][0]['start_location']
         olat, olong = origin_position['lat'], origin_position['lng']
@@ -84,14 +106,19 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
         destination_position = query_result[0]['legs'][0]['end_location']
         dlat, dlong = destination_position['lat'], destination_position['lng']
         dest_pos = (dlat, dlong)
-        if max_distance == None: max_distance = 1.25*calculate_distance(origin_pos, dest_pos)
+
+        # overview_polyline = query_result[0]['overview_polyline']['points']
+        # waypoints = polyline.decode(overview_polyline)
+        route_distance = query_result[0]['legs'][0]['distance']['value']
+        geodesic_distance = calculate_distance(origin_pos, dest_pos)
+        if max_distance == None: max_distance = 1.2*geodesic_distance # 1.2 is quite arbitrary, could change to user input later
 
         # the method below currently does not work for shorter distances, so revert to old method
-        if route_distance < 100000:
-            overview_polyline = query_result[0]['overview_polyline']['points']
-            waypoints = polyline.decode(overview_polyline)
-            waypoint_increment = len(waypoints) // 50
-            return waypoints[::waypoint_increment], origin_pos, dest_pos, float(route_distance)
+        # if route_distance < 60000:
+        #     overview_polyline = query_result[0]['overview_polyline']['points']
+        #     waypoints = polyline.decode(overview_polyline)
+        #     waypoint_increment = len(waypoints) // 50 if len(waypoints) > 50 else 1
+        #     return waypoints[::waypoint_increment], origin_pos, dest_pos, float(route_distance)
         
         # new method of calculating waypoints
         # center/average (a) latitude and longitude
@@ -105,15 +132,15 @@ def get_waypoints(origin: str | Position, destination: str | Position, max_dista
         sb_minlong, sb_maxlong = along-long_diff, along+long_diff
 
         waypoints = []
-        for waypoint_lat in np.arange(sb_minlat, sb_maxlat, MAX_SEARCH_RADIUS/DEG_LAT_TO_M):
+        for waypoint_lat in np.arange(sb_minlat, sb_maxlat, min(lat_diff/3, MAX_SEARCH_RADIUS/DEG_LAT_TO_M)): # up to 2*3 = 6 points in grid latitude-wise
             deg_long_to_m = DEG_LONG_TO_M*cos(radians(waypoint_lat))
-            for waypoint_long in np.arange(sb_minlong, sb_maxlong, MAX_SEARCH_RADIUS/deg_long_to_m):
+            for waypoint_long in np.arange(sb_minlong, sb_maxlong, min(long_diff/3, MAX_SEARCH_RADIUS/deg_long_to_m)): #  up to 2*3 = 6 points in grid longitude-wise
                 waypoint_pos = (waypoint_lat, waypoint_long)
                 if not position_filter(origin_pos, dest_pos, waypoint_pos): continue
                 if calculate_distance(origin_pos, waypoint_pos) + calculate_distance(dest_pos, waypoint_pos) < max_distance:
                     waypoints.append((waypoint_lat, waypoint_long))
 
-        return waypoints, origin_pos, dest_pos, float(route_distance)
+        return waypoints, origin_pos, dest_pos, float(geodesic_distance)
     
     except googlemaps.exceptions.ApiError as e:
         print(origin, destination)
@@ -131,42 +158,24 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
         locations += get_nearby_places(
             page_token="",
             location=waypoint,
-            radius=50000,
-            exclude_types=[],
+            # radius=50000,
+            # exclude_types=[],
             types=['tourist_attraction']
         )
-
-    MAX_REQUESTS_PER_SECOND = 90
-    for i in range(0, len(waypoints), MAX_REQUESTS_PER_SECOND):
-        for j in range(min(MAX_REQUESTS_PER_SECOND, len(waypoints) - i)):
-            thread = threading.Thread(
-                target=get_nearby_places_multithread, 
-                args=(waypoints[i+j], locations)
-            )
-            thread.start()
-            threads.append(thread)
-        for thread in threads:
-            thread.join()
-        # print(f'going to sleep for threads {i}')
-        time.sleep(1)
-        # print('awoke')
-        threads.clear()
-
+        
+    for i, waypoint in enumerate(waypoints[::increment]):
+        threads.append(threading.Thread(
+            target=get_nearby_places_multithread, 
+            args=(waypoint, locations)
+        ))
+        threads[i].start()
+        # prevents more than 100 requests per second
+        if (i+1) % MAX_REQUESTS_PER_SECOND == 0: 
+            print("slept on waypoint call")
+            time.sleep(1)
     
-    # for i, waypoint in enumerate(waypoints[::increment]):
-    #     threads.append(threading.Thread(
-    #         target=get_nearby_places_multithread, 
-    #         args=(waypoint, locations)
-    #     ))
-    #     threads[i].start()
-    #     # prevents more than 100 requests per second
-    #     if (i+1) % 100 == 0: 
-    #         # print("this happens")
-    #         time.sleep(1)
-    #     # print(f'waypoint {i} was processed')
-    
-    # for thread in threads:
-    #     thread.join()
+    for thread in threads:
+        thread.join()
 
     for location in locations:
         if not position_filter(origin, destination, location.position):
@@ -180,105 +189,55 @@ def possible_detours(waypoints: List[Position], origin: Position, destination: P
 
 
 def get_reviews(detours: List[Location]):
-    # gmaps = googlemaps.Client(key=api.get_google_api_key())
     detours_with_reviews = []
     threads = []
     detours_with_reviews = []
 
     def get_reviews_multithread(detour):
-        detour_with_review = get_place_reviews(detour)
-        if detour_with_review: detours_with_reviews.append(detour_with_review)
-        
-    MAX_REQUESTS_PER_SECOND = 90
-    for i in range(0, len(detours), MAX_REQUESTS_PER_SECOND):
-        for j in range(min(MAX_REQUESTS_PER_SECOND, len(detours) - i)):
-            thread = threading.Thread(
-                target=get_reviews_multithread, 
-                args=(detours[i+j],)
-            )
-            thread.start()
-            threads.append(thread)
-        for thread in threads:
-            thread.join()
-        # print(f'going to sleep for threads {i}')
-        time.sleep(1)
-        # print('awoke')
-        threads.clear()
+        detour_with_review = fetch_location(detour)
+        if detour_with_review: # location in database
+            detours_with_reviews.append(detour_with_review)
+        else:
+            detour_with_review = get_place_reviews(detour)
+            detour_with_review = get_wikipedia_review(detour)
+            if detour_with_review: 
+                store_location(detour_with_review)
+                detours_with_reviews.append(detour_with_review)
     
-    # def do_nothing(detour):
-    #     pass
-    # for i, detour in enumerate(detours):
-    #     threads.append(threading.Thread(
-    #         target=do_nothing, 
-    #         args=(detour,)
-    #     ))
-    #     threads[i].start()
-    #     # prevents more than 100 requests per second
-    #     # print(i)
-    #     # print((i+1) % 10 == 0)
-    #     # print(i+1 % 10 == 0)
-    #     if (i+1) % 100 == 0: 
-    #         print("going to sleep")
-    #         time.sleep(1)
-    #     print(f'{detour.name} was processed')
+    def do_nothing(detour):
+        pass # testing multithreading
+
+    for i, detour in enumerate(detours):
+        threads.append(threading.Thread(
+            target=get_reviews_multithread, 
+            args=(detour,)
+        ))
+        threads[i].start()
+        if (i+1) % MAX_REQUESTS_PER_SECOND == 0: 
+            print("slept on review call")
+            time.sleep(1)
     
-    # for thread in threads:
-    #     thread.join()
-    
+    for thread in threads:
+        thread.join()
+
     return detours_with_reviews
 
 
-def get_detours(origin: str | Position, destination: str | Position, increment=1):
-    waypoints, origin_pos, dest_pos, route_distance = get_waypoints(origin=origin, destination=destination)
+def get_detours(origin: str | Position, destination: str | Position, increment=1) -> List[Location]:
+    waypoints, origin_pos, dest_pos, geodesic_distance = get_waypoints(origin=origin, destination=destination)
     detours = possible_detours(waypoints=waypoints, origin=origin_pos, destination=dest_pos, increment=increment)
+    
+    start = time.time()
     detours_with_reviews = get_reviews(detours)
+    print(time.time() - start, "seconds to obtain reviews")
+
+    for detour in detours_with_reviews: # for distance weighting (although this probably only works on contiguous land)
+        detour.distance_from_route = geodesic_distance/(calculate_distance(origin_pos, detour.position) + calculate_distance(detour.position, dest_pos))
     
     return list(detours_with_reviews)
 
 
-if __name__ == '__main__':
-    # print("Success!")
-    # gmaps = googlemaps.Client(key=api.get_api_key())
-    # place = gmaps.find_place(
-    #     input='Samuel H. Young Park',
-    #     input_type='textquery',
-    # )
-    # place = gmaps.place(
-    #             place_id=place['candidates'][0]['place_id'] #'ChIJ4bwEPIBw44kRs7STmn977tE'
-    #         )
-    # place_results = place['result']
-    # test = []
-    # if 'reviews' in place_results.keys():
-    #     detour_reviews = place_results['reviews']
-    #     for detour_review in detour_reviews:
-    #         if detour_review['text']: test.append(detour_review['text'])
-    # print(test)
-
-    detours = get_detours(TEST_ORIGIN, TEST_DESTINATION, 1)
-    for detour_index, detour in enumerate(detours):
-        print(detour_index)
-        pprint(str(detour), width=1000)
-        print(detour.information)
-        pprint(detour.get_gmaps_link())
-
-    # with open('out/test_plot.csv', 'w', encoding='utf-8') as f:
-    #     writer = csv.writer(f)
-    #     writer.writerow(['name', 'lat', 'long'])
-        
-    #     for place_index, place in enumerate(detours):
-    #         place_lat, place_long = place.position
-    #         place_name = place.name
-    #         writer.writerow([place_name, place_lat, place_long])
-    
-    # with open('out/test_plot.csv', newline='\n', encoding='utf-8') as csvfile:
-    #     random_detours = csv.reader(csvfile)
-    #     row_list = []
-    #     for row in random_detours:
-    #         row_list.append(row)
-    #     random_detours = random.choices(row_list, k=30)
-    
-    # with open('out/test_plot.csv', 'w+', encoding='utf-8') as f:
-    #     writer = csv.writer(f)
-    #     writer.writerow(['name', 'lat', 'long'])
-    #     for row in random_detours:
-    #         writer.writerow(row)
+if __name__ == "__main__":
+    detours = get_detours(TEST_ORIGIN, CLOSE_DESTINATION, 1)
+    # for detour in detours:
+    #     fetch_location(detour)
